@@ -1,3 +1,4 @@
+// Package tui provides the Terminal User Interface for Berth.
 package tui
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/rluders/berth/internal/controller"
 )
 
+// Update handles incoming messages and updates the model accordingly.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd

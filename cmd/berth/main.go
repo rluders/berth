@@ -1,3 +1,4 @@
+// Package main is the entry point for the Berth TUI application.
 package main
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/rluders/berth/internal/tui"
 )
 
+// main function initializes and runs the Bubble Tea program.
 func main() {
 	p := tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

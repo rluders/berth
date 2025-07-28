@@ -1,3 +1,4 @@
+// Package tui provides the Terminal User Interface for Berth.
 package tui
 
 import (
@@ -6,6 +7,7 @@ import (
 	"github.com/rluders/berth/internal/controller"
 )
 
+// fetchContainersCmd is a Bubble Tea command that fetches a list of containers.
 func fetchContainersCmd() tea.Cmd {
 	return func() tea.Msg {
 		containers, err := controller.ListContainers()
@@ -16,6 +18,7 @@ func fetchContainersCmd() tea.Cmd {
 	}
 }
 
+// fetchImagesCmd is a Bubble Tea command that fetches a list of images.
 func fetchImagesCmd() tea.Cmd {
 	return func() tea.Msg {
 		images, err := controller.ListImages()
@@ -26,6 +29,7 @@ func fetchImagesCmd() tea.Cmd {
 	}
 }
 
+// fetchVolumesCmd is a Bubble Tea command that fetches a list of volumes.
 func fetchVolumesCmd() tea.Cmd {
 	return func() tea.Msg {
 		volumes, err := controller.ListVolumes()
@@ -36,6 +40,7 @@ func fetchVolumesCmd() tea.Cmd {
 	}
 }
 
+// fetchNetworksCmd is a Bubble Tea command that fetches a list of networks.
 func fetchNetworksCmd() tea.Cmd {
 	return func() tea.Msg {
 		networks, err := controller.ListNetworks()
@@ -46,6 +51,7 @@ func fetchNetworksCmd() tea.Cmd {
 	}
 }
 
+// fetchSystemInfoCmd is a Bubble Tea command that fetches system information.
 func fetchSystemInfoCmd() tea.Cmd {
 	return func() tea.Msg {
 		systemInfo, err := controller.GetSystemInfo()
@@ -56,6 +62,7 @@ func fetchSystemInfoCmd() tea.Cmd {
 	}
 }
 
+// startContainerCmd is a Bubble Tea command that starts a container.
 func startContainerCmd(idOrName string) tea.Cmd {
 	return func() tea.Msg {
 		err := controller.StartContainer(idOrName)
@@ -66,6 +73,7 @@ func startContainerCmd(idOrName string) tea.Cmd {
 	}
 }
 
+// stopContainerCmd is a Bubble Tea command that stops a container.
 func stopContainerCmd(idOrName string) tea.Cmd {
 	return func() tea.Msg {
 		err := controller.StopContainer(idOrName)
@@ -76,6 +84,7 @@ func stopContainerCmd(idOrName string) tea.Cmd {
 	}
 }
 
+// removeContainerCmd is a Bubble Tea command that removes a container.
 func removeContainerCmd(idOrName string) tea.Cmd {
 	return func() tea.Msg {
 		err := controller.RemoveContainer(idOrName)
@@ -86,6 +95,7 @@ func removeContainerCmd(idOrName string) tea.Cmd {
 	}
 }
 
+// getLogsCmd is a Bubble Tea command that fetches logs for a container.
 func getLogsCmd(idOrName string) tea.Cmd {
 	return func() tea.Msg {
 		logs, err := controller.GetContainerLogs(idOrName)
@@ -96,6 +106,7 @@ func getLogsCmd(idOrName string) tea.Cmd {
 	}
 }
 
+// inspectContainerCmd is a Bubble Tea command that inspects a container.
 func inspectContainerCmd(idOrName string) tea.Cmd {
 	return func() tea.Msg {
 		output, err := controller.InspectContainer(idOrName)
@@ -106,6 +117,7 @@ func inspectContainerCmd(idOrName string) tea.Cmd {
 	}
 }
 
+// removeImageCmd is a Bubble Tea command that removes an image.
 func removeImageCmd(idOrName string) tea.Cmd {
 	return func() tea.Msg {
 		err := controller.RemoveImage(idOrName)
@@ -116,6 +128,7 @@ func removeImageCmd(idOrName string) tea.Cmd {
 	}
 }
 
+// removeVolumeCmd is a Bubble Tea command that removes a volume.
 func removeVolumeCmd(name string) tea.Cmd {
 	return func() tea.Msg {
 		err := controller.RemoveVolume(name)
@@ -126,6 +139,7 @@ func removeVolumeCmd(name string) tea.Cmd {
 	}
 }
 
+// inspectNetworkCmd is a Bubble Tea command that inspects a network.
 func inspectNetworkCmd(idOrName string) tea.Cmd {
 	return func() tea.Msg {
 		output, err := controller.InspectNetwork(idOrName)
@@ -136,6 +150,7 @@ func inspectNetworkCmd(idOrName string) tea.Cmd {
 	}
 }
 
+// basicCleanupCmd is a Bubble Tea command that performs basic cleanup.
 func basicCleanupCmd() tea.Cmd {
 	return func() tea.Msg {
 		output, err := controller.BasicCleanup()
@@ -146,6 +161,7 @@ func basicCleanupCmd() tea.Cmd {
 	}
 }
 
+// advancedCleanupCmd is a Bubble Tea command that performs advanced cleanup.
 func advancedCleanupCmd() tea.Cmd {
 	return func() tea.Msg {
 		output, err := controller.AdvancedCleanup()
@@ -156,6 +172,7 @@ func advancedCleanupCmd() tea.Cmd {
 	}
 }
 
+// totalCleanupCmd is a Bubble Tea command that performs total cleanup.
 func totalCleanupCmd() tea.Cmd {
 	return func() tea.Msg {
 		output, err := controller.TotalCleanup()
@@ -165,3 +182,4 @@ func totalCleanupCmd() tea.Cmd {
 		return statusMsg(fmt.Sprintf("Total Cleanup completed:\n%s", output))
 	}
 }
+

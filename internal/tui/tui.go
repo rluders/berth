@@ -1,3 +1,4 @@
+// Package tui provides the Terminal User Interface for Berth.
 package tui
 
 import (
@@ -15,8 +16,10 @@ var (
 	currentTheme = DefaultTheme()
 )
 
+// statusMsg is a custom type for sending status messages.
 type statusMsg string
 
+// ViewType represents the different views in the TUI.
 type ViewType int
 
 const (
@@ -29,6 +32,7 @@ const (
 	LogsView
 )
 
+// Model represents the main application model.
 type Model struct {
 	engineType            engine.EngineType
 	currentView           ViewType
@@ -53,6 +57,7 @@ type Model struct {
 	viewStack             []ViewType
 }
 
+// InitialModel returns an initialized Model with default values.
 func InitialModel() Model {
 	containerColumns := []table.Column{
 		{Title: "ID", Width: 12},
@@ -134,6 +139,7 @@ func InitialModel() Model {
 	}
 }
 
+// getViewName returns the string representation of the current view.
 func (m Model) getViewName() string {
 	switch m.currentView {
 	case ContainersView:
@@ -154,6 +160,7 @@ func (m Model) getViewName() string {
 	return "Unknown"
 }
 
+// getFooterHelp returns the help text for the current view.
 func (m Model) getFooterHelp() string {
 	switch m.currentView {
 	case ContainersView:
@@ -174,11 +181,13 @@ func (m Model) getFooterHelp() string {
 	return "q:Quit"
 }
 
+// pushView adds the current view to the stack and sets the new view.
 func (m *Model) pushView(view ViewType) {
 	m.viewStack = append(m.viewStack, m.currentView)
 	m.currentView = view
 }
 
+// popView removes the current view from the stack and returns to the previous view.
 func (m *Model) popView() {
 	if len(m.viewStack) > 0 {
 		m.currentView = m.viewStack[len(m.viewStack)-1]
@@ -188,6 +197,7 @@ func (m *Model) popView() {
 	}
 }
 
+// Init initializes the Bubble Tea program.
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(fetchContainersCmd(), fetchImagesCmd(), fetchVolumesCmd(), fetchNetworksCmd(), fetchSystemInfoCmd(), m.spinner.Tick)
 }

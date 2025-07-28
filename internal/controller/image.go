@@ -1,3 +1,4 @@
+// Package controller provides the logic for interacting with container engines.
 package controller
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/rluders/berth/internal/engine"
 )
 
+// Image represents an image's simplified information.
 type Image struct {
 	ID         string
 	Repository string

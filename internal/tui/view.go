@@ -1,3 +1,4 @@
+// Package tui provides the Terminal User Interface for Berth.
 package tui
 
 import (
@@ -6,6 +7,7 @@ import (
 	"strings"
 )
 
+// View renders the main TUI view.
 func (m Model) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("Error: %v", m.err)
