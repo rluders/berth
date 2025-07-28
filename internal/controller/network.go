@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rluders/container-tui/internal/engine"
+	"github.com/rluders/berth/internal/engine"
 )
 
 type Network struct {
-	ID      string
-	Name    string
-	Driver  string
-	Scope   string
+	ID     string
+	Name   string
+	Driver string
+	Scope  string
 }
 
 // ListNetworks lists all networks.

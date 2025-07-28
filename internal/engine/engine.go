@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/rluders/container-tui/internal/utils"
+	"github.com/rluders/berth/internal/utils"
 )
 
 type EngineType string

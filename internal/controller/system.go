@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rluders/container-tui/internal/engine"
+	"github.com/rluders/berth/internal/engine"
 )
 
 type SystemInfo struct {

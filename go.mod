@@ -1,4 +1,4 @@
-module github.com/rluders/container-tui
+module github.com/rluders/berth
 
 go 1.24.2
 

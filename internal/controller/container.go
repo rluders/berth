@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rluders/container-tui/internal/engine"
+	"github.com/rluders/berth/internal/engine"
 )
 
 type Container struct {
-	ID     string
-	Image  string
+	ID      string
+	Image   string
 	Command string
 	Created string
-	Status string
-	Ports  string
-	Names  string
+	Status  string
+	Ports   string
+	Names   string
 }
 
 // ListContainers lists all running and stopped containers.
@@ -80,6 +80,15 @@ func GetContainerLogs(idOrName string) (string, error) {
 	stdout, stderr, err := engine.RunEngineCommand("logs", idOrName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get logs for container %s: %s, %w", idOrName, stderr, err)
+	}
+	return stdout, nil
+}
+
+// InspectContainer inspects a container by its ID or name and returns its raw JSON output.
+func InspectContainer(idOrName string) (string, error) {
+	stdout, stderr, err := engine.RunEngineCommand("inspect", idOrName)
+	if err != nil {
+		return "", fmt.Errorf("failed to inspect container %s: %s, %w", idOrName, stderr, err)
 	}
 	return stdout, nil
 }
