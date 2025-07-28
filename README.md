@@ -7,21 +7,8 @@
 [![Made with Bubbletea](https://img.shields.io/badge/made%20with-bubbletea-ff69b4?logo=github)](https://github.com/charmbracelet/bubbletea)
 
 > **Berth** is a terminal-based UI to manage your containers, images, volumes, networks, and system usage — with support for **Docker** and **Podman**.
-
----
-
-## ✨ Features (v0.4)
-
-- ✅ **Structured TUI Layout**: Header, content area, and footer for clarity and keyboard hints.
-- 🖥️ **Fullscreen Mode**: Uses AltScreen for a fully immersive terminal experience.
-- 🌀 **Action Feedback**: Spinners and status messages for operations like start, stop, and remove.
-- 📄 **Improved Logs View**: Scrollable with container metadata and dynamic keybind hints.
-- 🔍 **Enhanced Inspect View**: Scrollable, formatted JSON output with container details.
-- 🔁 **Consistent Navigation**: Switch views easily with keys `1–5` or via focused commands.
-- 🎨 **Unified Theming**: Centralized colors, spacing, and UI components with `lipgloss`.
-
----
-
+> 🧠 Name origin: In maritime terms, a **berth** is a designated place where a ship is docked — just like containers in your stack. Clean, organized, and under control.
+ 
 ## 🚀 Installation
 
 ```bash
@@ -37,8 +24,6 @@ go build -o berth ./cmd/berth/main.go
 # 4. Run it!
 ./berth
 ````
-
----
 
 ## 🧭 Usage
 
@@ -76,11 +61,8 @@ go build -o berth ./cmd/berth/main.go
 
 * `q` or `esc` — Return or quit
 
----
-
 ## 📁 Project Structure
 
-```
 .
 ├── cmd/               # Entry point
 ├── internal/
@@ -92,12 +74,6 @@ go build -o berth ./cmd/berth/main.go
 └── assets/            # Logos, themes, future plugins
 ```
 
----
-
 ## 📜 License
 
 Licensed under the [MIT License](LICENSE).
-
----
-
-> 🧠 Name origin: In maritime terms, a **berth** is a designated place where a ship is docked — just like containers in your stack. Clean, organized, and under control.
