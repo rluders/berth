@@ -61,19 +61,6 @@ go build -o berth ./cmd/berth/main.go
 
 * `q` or `esc` — Return or quit
 
-## 📁 Project Structure
-
-.
-├── cmd/               # Entry point
-├── internal/
-│   ├── tui/           # Bubbletea models/views
-│   ├── engine/        # Docker/Podman abstraction
-│   ├── controller/    # Business logic
-│   ├── state/         # Shared UI/application state
-│   └── utils/         # Helpers and runners
-└── assets/            # Logos, themes, future plugins
-```
-
 ## 📜 License
 
 Licensed under the [MIT License](LICENSE).
