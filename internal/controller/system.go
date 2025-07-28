@@ -1,3 +1,4 @@
+// Package controller provides the logic for interacting with container engines.
 package controller
 
 import (
@@ -7,15 +8,16 @@ import (
 	"github.com/rluders/berth/internal/engine"
 )
 
+// SystemInfo holds system-wide statistics about containers, images, volumes, and networks.
 type SystemInfo struct {
-	Containers int
-	Running    int
-	Paused     int
-	Stopped    int
-	Images     int
-	Volumes    int
-	Networks   int
-	DiskUsage  string
+	Containers int // Total number of containers.
+	Running    int // Number of running containers.
+	Paused     int // Number of paused containers.
+	Stopped    int // Number of stopped containers.
+	Images     int // Total number of images.
+	Volumes    int // Total number of volumes.
+	Networks   int // Total number of networks.
+	DiskUsage  string // Disk space used by Docker/Podman resources.
 }
 
 // GetSystemInfo retrieves system-wide information about containers, images, and volumes.
@@ -29,10 +31,10 @@ func GetSystemInfo() (SystemInfo, error) {
 	}
 	fields := strings.Split(strings.TrimSpace(stdout), "\n")
 	if len(fields) == 4 {
-		fmt.Sscanf(fields[0], "%d", &info.Containers)
-		fmt.Sscanf(fields[1], "%d", &info.Running)
-		fmt.Sscanf(fields[2], "%d", &info.Paused)
-		fmt.Sscanf(fields[3], "%d", &info.Stopped)
+		_, _ = fmt.Sscanf(fields[0], "%d", &info.Containers)
+		_, _ = fmt.Sscanf(fields[1], "%d", &info.Running)
+		_, _ = fmt.Sscanf(fields[2], "%d", &info.Paused)
+		_, _ = fmt.Sscanf(fields[3], "%d", &info.Stopped)
 	}
 
 	// Get image count
@@ -57,7 +59,7 @@ func GetSystemInfo() (SystemInfo, error) {
 	info.Networks = len(strings.Split(strings.TrimSpace(stdout), "\n"))
 
 	// Get disk usage (simplified for now, can be improved)
-	stdout, stderr, err = engine.RunEngineCommand("system", "df", "--format", "{{.Size}}")
+	stdout, _, err = engine.RunEngineCommand("system", "df", "--format", "{{.Size}}")
 	if err != nil {
 		// This command might not be available in older versions or for Podman in the same way
 		// Handle gracefully or provide a fallback
