@@ -15,13 +15,18 @@ run:
 	@echo "Running $(APP_NAME)..."
 	$(GO) run $(APP_PATH)
 
+generate-mocks:
+	go install github.com/vektra/mockery/v3@latest
+	export MOCKERY_IN_PACKAGE=true
+	mockery --config .mockery.yaml
+
 clean:
 	@echo "Cleaning up..."
 	$(GO) clean
 	rm -f $(APP_NAME)
 	@echo "Cleanup complete."
 
-test:
+test: generate-mocks
 	@echo "Running tests..."
 	$(GO) test ./...
 

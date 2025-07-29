@@ -2,10 +2,9 @@
 package engine
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
-
-	"github.com/rluders/berth/internal/utils"
 )
 
 // EngineType represents the type of container engine detected.
@@ -13,9 +12,9 @@ type EngineType string
 
 const (
 	// Docker represents the Docker container engine.
-	Docker  EngineType = "docker"
+	Docker EngineType = "docker"
 	// Podman represents the Podman container engine.
-	Podman  EngineType = "podman"
+	Podman EngineType = "podman"
 	// Unknown represents an unknown or undetected container engine.
 	Unknown EngineType = "unknown"
 )
@@ -57,5 +56,10 @@ func RunEngineCommand(args ...string) (string, string, error) {
 	if detectedEngine == Unknown {
 		return "", "", fmt.Errorf("no container engine detected")
 	}
-	return utils.RunCommand(enginePath, args...)
+	cmd := exec.Command(enginePath, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	return stdout.String(), stderr.String(), err
 }

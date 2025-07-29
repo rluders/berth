@@ -2,11 +2,23 @@
 package controller
 
 import (
+	"context"
 	"fmt"
-	"strings"
 
+	"github.com/docker/docker/api/types/volume"
 	"github.com/rluders/berth/internal/engine"
+	"github.com/rluders/berth/internal/service"
 )
+
+var volumeService service.VolumeService
+
+func init() {
+	cli, err := engine.NewClient()
+	if err != nil {
+		panic(fmt.Errorf("failed to create Docker client: %w", err))
+	}
+	volumeService = service.NewVolumeService(cli)
+}
 
 // Volume represents a volume's simplified information.
 type Volume struct {
@@ -18,37 +30,24 @@ type Volume struct {
 
 // ListVolumes lists all volumes.
 func ListVolumes() ([]Volume, error) {
-	stdout, stderr, err := engine.RunEngineCommand("volume", "ls", "--format", "{{.Name}}\t{{.Driver}}\t{{.Scope}}\t{{.Mountpoint}}")
+	volumes, err := volumeService.VolumeList(context.Background(), volume.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list volumes: %s, %w", stderr, err)
+		return nil, fmt.Errorf("failed to list volumes: %w", err)
 	}
 
-	lines := strings.Split(strings.TrimSpace(stdout), "\n")
-	var volumes []Volume
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		fields := strings.Split(line, "\t")
-		if len(fields) != 4 {
-			// Log or handle malformed line
-			continue
-		}
-		volumes = append(volumes, Volume{
-			Name:       fields[0],
-			Driver:     fields[1],
-			Scope:      fields[2],
-			Mountpoint: fields[3],
+	var result []Volume
+	for _, v := range volumes.Volumes {
+		result = append(result, Volume{
+			Name:       v.Name,
+			Driver:     v.Driver,
+			Mountpoint: v.Mountpoint,
 		})
 	}
-	return volumes, nil
+
+	return result, nil
 }
 
 // RemoveVolume removes a volume by its name.
 func RemoveVolume(name string) error {
-	_, stderr, err := engine.RunEngineCommand("volume", "rm", name)
-	if err != nil {
-		return fmt.Errorf("failed to remove volume %s: %s, %w", name, stderr, err)
-	}
-	return nil
+	return volumeService.VolumeRemove(context.Background(), name, false)
 }

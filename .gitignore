@@ -1,2 +1,5 @@
 .idea/
 NOTES.md
+mocks/
+*.log
+berth

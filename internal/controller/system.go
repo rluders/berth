@@ -2,11 +2,25 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/rluders/berth/internal/engine"
+	"github.com/rluders/berth/internal/service"
 )
+
+var systemService service.SystemService
+
+func init() {
+	cli, err := engine.NewClient()
+	if err != nil {
+		panic(fmt.Errorf("failed to create Docker client: %w", err))
+	}
+	systemService = service.NewSystemService(cli)
+}
 
 // SystemInfo holds system-wide statistics about containers, images, volumes, and networks.
 type SystemInfo struct {
@@ -17,91 +31,56 @@ type SystemInfo struct {
 	Images     int // Total number of images.
 	Volumes    int // Total number of volumes.
 	Networks   int // Total number of networks.
-	DiskUsage  string // Disk space used by Docker/Podman resources.
+	DiskUsage  string
 }
 
 // GetSystemInfo retrieves system-wide information about containers, images, and volumes.
 func GetSystemInfo() (SystemInfo, error) {
-	var info SystemInfo
-
-	// Get container stats
-	stdout, stderr, err := engine.RunEngineCommand("info", "--format", "{{.Containers}}\t{{.ContainersRunning}}\t{{.ContainersPaused}}\t{{.ContainersStopped}}")
+	info, err := systemService.Info(context.Background())
 	if err != nil {
-		return info, fmt.Errorf("failed to get container info: %s, %w", stderr, err)
-	}
-	fields := strings.Split(strings.TrimSpace(stdout), "\n")
-	if len(fields) == 4 {
-		_, _ = fmt.Sscanf(fields[0], "%d", &info.Containers)
-		_, _ = fmt.Sscanf(fields[1], "%d", &info.Running)
-		_, _ = fmt.Sscanf(fields[2], "%d", &info.Paused)
-		_, _ = fmt.Sscanf(fields[3], "%d", &info.Stopped)
+		return SystemInfo{}, fmt.Errorf("failed to get info: %w", err)
 	}
 
-	// Get image count
-	stdout, stderr, err = engine.RunEngineCommand("images", "-q")
+	diskUsage, err := systemService.DiskUsage(context.Background(), types.DiskUsageOptions{})
 	if err != nil {
-		return info, fmt.Errorf("failed to get image count: %s, %w", stderr, err)
-	}
-	info.Images = len(strings.Split(strings.TrimSpace(stdout), "\n"))
-
-	// Get volume count
-	stdout, stderr, err = engine.RunEngineCommand("volume", "ls", "-q")
-	if err != nil {
-		return info, fmt.Errorf("failed to get volume count: %s, %w", stderr, err)
-	}
-	info.Volumes = len(strings.Split(strings.TrimSpace(stdout), "\n"))
-
-	// Get network count
-	stdout, stderr, err = engine.RunEngineCommand("network", "ls", "-q")
-	if err != nil {
-		return info, fmt.Errorf("failed to get network count: %s, %w", stderr, err)
-	}
-	info.Networks = len(strings.Split(strings.TrimSpace(stdout), "\n"))
-
-	// Get disk usage (simplified for now, can be improved)
-	stdout, _, err = engine.RunEngineCommand("system", "df", "--format", "{{.Size}}")
-	if err != nil {
-		// This command might not be available in older versions or for Podman in the same way
-		// Handle gracefully or provide a fallback
-		info.DiskUsage = "N/A"
-	} else {
-		lines := strings.Split(strings.TrimSpace(stdout), "\n")
-		if len(lines) > 0 {
-			info.DiskUsage = lines[len(lines)-1] // Last line usually contains total size
-		} else {
-			info.DiskUsage = "N/A"
-		}
+		return SystemInfo{}, fmt.Errorf("failed to get disk usage: %w", err)
 	}
 
-	return info, nil
+	return SystemInfo{
+		Containers: info.Containers,
+		Running:    info.ContainersRunning,
+		Paused:     info.ContainersPaused,
+		Stopped:    info.ContainersStopped,
+		Images:     info.Images,
+		Volumes:    len(diskUsage.Volumes),
+		Networks:   len(info.DriverStatus),
+		DiskUsage:  fmt.Sprintf("%d", diskUsage.LayersSize),
+	}, nil
 }
 
 // BasicCleanup removes stopped containers, unused networks, and unused images.
 func BasicCleanup() (string, error) {
 	var output strings.Builder
 
-	// Prune containers
-	stdout, stderr, err := engine.RunEngineCommand("container", "prune", "-f")
+	_, err := systemService.ContainersPrune(context.Background(), filters.Args{})
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune containers: %s\n", stderr))
+		output.WriteString(fmt.Sprintf("Failed to prune containers: %s\n", err))
 	} else {
-		output.WriteString(fmt.Sprintf("Container prune output:\n%s\n", stdout))
+		output.WriteString("Containers pruned successfully\n")
 	}
 
-	// Prune networks
-	stdout, stderr, err = engine.RunEngineCommand("network", "prune", "-f")
+	_, err = systemService.NetworksPrune(context.Background(), filters.Args{})
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune networks: %s\n", stderr))
+		output.WriteString(fmt.Sprintf("Failed to prune networks: %s\n", err))
 	} else {
-		output.WriteString(fmt.Sprintf("Network prune output:\n%s\n", stdout))
+		output.WriteString("Networks pruned successfully\n")
 	}
 
-	// Prune images
-	stdout, stderr, err = engine.RunEngineCommand("image", "prune", "-f")
+	_, err = systemService.ImagesPrune(context.Background(), filters.Args{})
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune images: %s\n", stderr))
+		output.WriteString(fmt.Sprintf("Failed to prune images: %s\n", err))
 	} else {
-		output.WriteString(fmt.Sprintf("Image prune output:\n%s\n", stdout))
+		output.WriteString("Images pruned successfully\n")
 	}
 
 	return output.String(), nil
@@ -111,20 +90,20 @@ func BasicCleanup() (string, error) {
 func AdvancedCleanup() (string, error) {
 	var output strings.Builder
 
-	// Prune volumes
-	stdout, stderr, err := engine.RunEngineCommand("volume", "prune", "-f")
+	_, err := systemService.VolumesPrune(context.Background(), filters.Args{})
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune volumes: %s\n", stderr))
+		output.WriteString(fmt.Sprintf("Failed to prune volumes: %s\n", err))
 	} else {
-		output.WriteString(fmt.Sprintf("Volume prune output:\n%s\n", stdout))
+		output.WriteString("Volumes pruned successfully\n")
 	}
 
-	// Prune dangling images
-	stdout, stderr, err = engine.RunEngineCommand("image", "prune", "-f", "--filter", "dangling=true")
+	args := filters.NewArgs()
+	args.Add("dangling", "true")
+	_, err = systemService.ImagesPrune(context.Background(), args)
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune dangling images: %s\n", stderr))
+		output.WriteString(fmt.Sprintf("Failed to prune dangling images: %s\n", err))
 	} else {
-		output.WriteString(fmt.Sprintf("Dangling image prune output:\n%s\n", stdout))
+		output.WriteString("Dangling images pruned successfully\n")
 	}
 
 	return output.String(), nil
@@ -132,9 +111,25 @@ func AdvancedCleanup() (string, error) {
 
 // TotalCleanup prunes all unused containers, images, volumes, and networks.
 func TotalCleanup() (string, error) {
-	stdout, stderr, err := engine.RunEngineCommand("system", "prune", "-a", "--volumes", "-f")
+	_, err := systemService.ContainersPrune(context.Background(), filters.Args{})
 	if err != nil {
-		return "", fmt.Errorf("failed to perform total cleanup: %s, %w", stderr, err)
+		return "", fmt.Errorf("failed to prune containers: %w", err)
 	}
-	return stdout, nil
+
+	_, err = systemService.NetworksPrune(context.Background(), filters.Args{})
+	if err != nil {
+		return "", fmt.Errorf("failed to prune networks: %w", err)
+	}
+
+	_, err = systemService.ImagesPrune(context.Background(), filters.Args{})
+	if err != nil {
+		return "", fmt.Errorf("failed to prune images: %w", err)
+	}
+
+	_, err = systemService.VolumesPrune(context.Background(), filters.Args{})
+	if err != nil {
+		return "", fmt.Errorf("failed to prune volumes: %w", err)
+	}
+
+	return "Total cleanup performed successfully", nil
 }
