@@ -38,10 +38,14 @@ func ListImages() ([]Image, error) {
 
 	var result []Image
 	for _, i := range images {
+		repoTag := ""
+		if len(i.RepoTags) > 0 {
+			repoTag = i.RepoTags[0]
+		}
 		result = append(result, Image{
 			ID:         i.ID[7:19],
-			Repository: i.RepoTags[0],
-			Tag:        i.RepoTags[0],
+			Repository: repoTag,
+			Tag:        repoTag,
 			Size:       fmt.Sprintf("%d", i.Size),
 			Created:    fmt.Sprintf("%d", i.Created),
 		})

@@ -3,6 +3,7 @@ package tui
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
@@ -59,7 +60,7 @@ type Model struct {
 
 // InitialModel returns an initialized Model with default values.
 func InitialModel() Model {
-	fmt.Println("Initializing containerColumns...")
+	slog.Debug("InitialModel: Initializing containerColumns...")
 	containerColumns := []table.Column{
 		{Title: "ID", Width: 12},
 		{Title: "Image", Width: 20},
@@ -70,14 +71,14 @@ func InitialModel() Model {
 		{Title: "Names", Width: 20},
 	}
 
-	fmt.Println("Initializing containerTable...")
+	slog.Debug("InitialModel: Initializing containerTable...")
 	containerTable := table.New(
 		table.WithColumns(containerColumns),
 		table.WithFocused(true),
 		table.WithHeight(10),
 	)
 
-	fmt.Println("Initializing imageColumns...")
+	slog.Debug("InitialModel: Initializing imageColumns...")
 	imageColumns := []table.Column{
 		{Title: "ID", Width: 15},
 		{Title: "Repository", Width: 30},
@@ -86,14 +87,14 @@ func InitialModel() Model {
 		{Title: "Created", Width: 20},
 	}
 
-	fmt.Println("Initializing imageTable...")
+	slog.Debug("InitialModel: Initializing imageTable...")
 	imageTable := table.New(
 		table.WithColumns(imageColumns),
 		table.WithFocused(false),
 		table.WithHeight(10),
 	)
 
-	fmt.Println("Initializing volumeColumns...")
+	slog.Debug("InitialModel: Initializing volumeColumns...")
 	volumeColumns := []table.Column{
 		{Title: "Name", Width: 30},
 		{Title: "Driver", Width: 15},
@@ -101,14 +102,14 @@ func InitialModel() Model {
 		{Title: "Mountpoint", Width: 50},
 	}
 
-	fmt.Println("Initializing volumeTable...")
+	slog.Debug("InitialModel: Initializing volumeTable...")
 	volumeTable := table.New(
 		table.WithColumns(volumeColumns),
 		table.WithFocused(false),
 		table.WithHeight(10),
 	)
 
-	fmt.Println("Initializing networkColumns...")
+	slog.Debug("InitialModel: Initializing networkColumns...")
 	networkColumns := []table.Column{
 		{Title: "ID", Width: 15},
 		{Title: "Name", Width: 30},
@@ -116,14 +117,14 @@ func InitialModel() Model {
 		{Title: "Scope", Width: 10},
 	}
 
-	fmt.Println("Initializing networkTable...")
+	slog.Debug("InitialModel: Initializing networkTable...")
 	networkTable := table.New(
 		table.WithColumns(networkColumns),
 		table.WithFocused(false),
 		table.WithHeight(10),
 	)
 
-	fmt.Println("Setting table styles...")
+	slog.Debug("InitialModel: Setting table styles...")
 	s := table.DefaultStyles()
 	s.Header = currentTheme.TableHeaderStyle
 	s.Selected = currentTheme.TableSelectedStyle
@@ -132,7 +133,7 @@ func InitialModel() Model {
 	volumeTable.SetStyles(s)
 	networkTable.SetStyles(s)
 
-	fmt.Println("Returning InitialModel...")
+	slog.Debug("InitialModel: Returning Model...")
 	return Model{
 		engineType:        engine.DetectEngine(),
 		currentView:       ContainersView,
@@ -151,6 +152,7 @@ func InitialModel() Model {
 
 // getViewName returns the string representation of the current view.
 func (m Model) getViewName() string {
+	slog.Debug("getViewName called")
 	switch m.currentView {
 	case ContainersView:
 		return "Containers"
@@ -172,6 +174,7 @@ func (m Model) getViewName() string {
 
 // getFooterHelp returns the help text for the current view.
 func (m Model) getFooterHelp() string {
+	slog.Debug("getFooterHelp called")
 	switch m.currentView {
 	case ContainersView:
 		return "1:Containers • 2:Images • 3:Volumes • 4:Networks • 5:System • s:Start • x:Stop • d:Remove • l:Logs • i:Inspect • q:Quit"
@@ -193,12 +196,14 @@ func (m Model) getFooterHelp() string {
 
 // pushView adds the current view to the stack and sets the new view.
 func (m *Model) pushView(view ViewType) {
+	slog.Debug("pushView called", "view", view)
 	m.viewStack = append(m.viewStack, m.currentView)
 	m.currentView = view
 }
 
 // popView removes the current view from the stack and returns to the previous view.
 func (m *Model) popView() {
+	slog.Debug("popView called")
 	if len(m.viewStack) > 0 {
 		m.currentView = m.viewStack[len(m.viewStack)-1]
 		m.viewStack = m.viewStack[:len(m.viewStack)-1]
@@ -209,5 +214,17 @@ func (m *Model) popView() {
 
 // Init initializes the Bubble Tea program.
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(fetchContainersCmd(), fetchImagesCmd(), fetchVolumesCmd(), fetchNetworksCmd(), fetchSystemInfoCmd(), m.spinner.Tick)
+	slog.Debug("Init: Calling fetchContainersCmd...")
+	cmd1 := fetchContainersCmd()
+	slog.Debug("Init: Calling fetchImagesCmd...")
+	cmd2 := fetchImagesCmd()
+	slog.Debug("Init: Calling fetchVolumesCmd...")
+	cmd3 := fetchVolumesCmd()
+	slog.Debug("Init: Calling fetchNetworksCmd...")
+	cmd4 := fetchNetworksCmd()
+	slog.Debug("Init: Calling fetchSystemInfoCmd...")
+	cmd5 := fetchSystemInfoCmd()
+	slog.Debug("Init: Calling spinner.Tick...")
+	cmd6 := m.spinner.Tick
+	return tea.Batch(cmd1, cmd2, cmd3, cmd4, cmd5, cmd6)
 }
