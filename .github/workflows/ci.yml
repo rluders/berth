@@ -23,6 +23,9 @@ jobs:
           go-version: ${{ matrix.go-version }}
           check-latest: true
 
+      - name: Generate mocks
+        run: make generate-mocks
+
       - name: Run golangci-lint (latest)
         uses: golangci/golangci-lint-action@v6
         with:
@@ -45,6 +48,9 @@ jobs:
           go-version: ${{ matrix.go-version }}
           check-latest: true
           cache: true
+
+      - name: Generate mocks
+        run: make generate-mocks
 
       - name: Verify dependencies
         run: go mod tidy && git diff --exit-code go.mod go.sum
