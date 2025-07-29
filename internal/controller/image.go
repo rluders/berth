@@ -2,11 +2,23 @@
 package controller
 
 import (
+	"context"
 	"fmt"
-	"strings"
 
+	dockerImageTypes "github.com/docker/docker/api/types/image"
 	"github.com/rluders/berth/internal/engine"
+	"github.com/rluders/berth/internal/service"
 )
+
+var imageService service.ImageService
+
+func init() {
+	cli, err := engine.NewClient()
+	if err != nil {
+		panic(fmt.Errorf("failed to create Docker client: %w", err))
+	}
+	imageService = service.NewImageService(cli)
+}
 
 // Image represents an image's simplified information.
 type Image struct {
@@ -19,38 +31,27 @@ type Image struct {
 
 // ListImages lists all images.
 func ListImages() ([]Image, error) {
-	stdout, stderr, err := engine.RunEngineCommand("images", "--format", "{{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}")
+	images, err := imageService.ImageList(context.Background(), dockerImageTypes.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list images: %s, %w", stderr, err)
+		return nil, fmt.Errorf("failed to list images: %w", err)
 	}
 
-	lines := strings.Split(strings.TrimSpace(stdout), "\n")
-	var images []Image
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		fields := strings.Split(line, "\t")
-		if len(fields) != 5 {
-			// Log or handle malformed line
-			continue
-		}
-		images = append(images, Image{
-			ID:         fields[0],
-			Repository: fields[1],
-			Tag:        fields[2],
-			Size:       fields[3],
-			Created:    fields[4],
+	var result []Image
+	for _, i := range images {
+		result = append(result, Image{
+			ID:         i.ID[7:19],
+			Repository: i.RepoTags[0],
+			Tag:        i.RepoTags[0],
+			Size:       fmt.Sprintf("%d", i.Size),
+			Created:    fmt.Sprintf("%d", i.Created),
 		})
 	}
-	return images, nil
+
+	return result, nil
 }
 
 // RemoveImage removes an image by its ID or name.
 func RemoveImage(idOrName string) error {
-	_, stderr, err := engine.RunEngineCommand("rmi", idOrName)
-	if err != nil {
-		return fmt.Errorf("failed to remove image %s: %s, %w", idOrName, stderr, err)
-	}
-	return nil
+	_, err := imageService.ImageRemove(context.Background(), idOrName, dockerImageTypes.RemoveOptions{})
+	return err
 }

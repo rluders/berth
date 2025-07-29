@@ -59,6 +59,7 @@ type Model struct {
 
 // InitialModel returns an initialized Model with default values.
 func InitialModel() Model {
+	fmt.Println("Initializing containerColumns...")
 	containerColumns := []table.Column{
 		{Title: "ID", Width: 12},
 		{Title: "Image", Width: 20},
@@ -69,12 +70,14 @@ func InitialModel() Model {
 		{Title: "Names", Width: 20},
 	}
 
+	fmt.Println("Initializing containerTable...")
 	containerTable := table.New(
 		table.WithColumns(containerColumns),
 		table.WithFocused(true),
 		table.WithHeight(10),
 	)
 
+	fmt.Println("Initializing imageColumns...")
 	imageColumns := []table.Column{
 		{Title: "ID", Width: 15},
 		{Title: "Repository", Width: 30},
@@ -83,12 +86,14 @@ func InitialModel() Model {
 		{Title: "Created", Width: 20},
 	}
 
+	fmt.Println("Initializing imageTable...")
 	imageTable := table.New(
 		table.WithColumns(imageColumns),
 		table.WithFocused(false),
 		table.WithHeight(10),
 	)
 
+	fmt.Println("Initializing volumeColumns...")
 	volumeColumns := []table.Column{
 		{Title: "Name", Width: 30},
 		{Title: "Driver", Width: 15},
@@ -96,12 +101,14 @@ func InitialModel() Model {
 		{Title: "Mountpoint", Width: 50},
 	}
 
+	fmt.Println("Initializing volumeTable...")
 	volumeTable := table.New(
 		table.WithColumns(volumeColumns),
 		table.WithFocused(false),
 		table.WithHeight(10),
 	)
 
+	fmt.Println("Initializing networkColumns...")
 	networkColumns := []table.Column{
 		{Title: "ID", Width: 15},
 		{Title: "Name", Width: 30},
@@ -109,12 +116,14 @@ func InitialModel() Model {
 		{Title: "Scope", Width: 10},
 	}
 
+	fmt.Println("Initializing networkTable...")
 	networkTable := table.New(
 		table.WithColumns(networkColumns),
 		table.WithFocused(false),
 		table.WithHeight(10),
 	)
 
+	fmt.Println("Setting table styles...")
 	s := table.DefaultStyles()
 	s.Header = currentTheme.TableHeaderStyle
 	s.Selected = currentTheme.TableSelectedStyle
@@ -123,6 +132,7 @@ func InitialModel() Model {
 	volumeTable.SetStyles(s)
 	networkTable.SetStyles(s)
 
+	fmt.Println("Returning InitialModel...")
 	return Model{
 		engineType:        engine.DetectEngine(),
 		currentView:       ContainersView,
