@@ -1,0 +1,11 @@
+template: testify
+
+packages:
+  github.com/docker/docker/client:
+    config:
+      dir: ./mocks/client
+      filename: "APIClient.go"
+      pkgname: "client"
+      structname: "Mock{{.InterfaceName}}"
+    interfaces:
+      APIClient:

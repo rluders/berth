@@ -14,7 +14,25 @@ build:
 run:
 	@echo "Running $(APP_NAME)..."
 	$(GO) run $(APP_PATH)
+# Makefile for berth project
 
+.PHONY: all build test clean generate-mocks
+
+all: build
+
+build:
+	go build -o berth ./cmd/berth
+
+test:
+	go test -v ./...
+
+clean:
+	rm -f berth
+
+generate-mocks:
+	go install github.com/vektra/mockery/v3@latest
+	export MOCKERY_IN_PACKAGE=true
+	mockery --config .mockery.yaml
 clean:
 	@echo "Cleaning up..."
 	$(GO) clean
