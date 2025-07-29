@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/api/types/filters"
 	networkTypes "github.com/docker/docker/api/types/network"
 	dockerClient "github.com/docker/docker/client"
 	"github.com/rluders/berth/mocks/client"
@@ -137,7 +138,12 @@ func Test_dockerNetworkService_NetworkList(t *testing.T) {
 	mockClient.EXPECT().NetworkList(mock.Anything, networkTypes.ListOptions{}).Return(successList, nil)
 
 	// Setup different options for failed network list
-	filteredOptions := networkTypes.ListOptions{}
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("label", "test=true")
+	filterArgs.Add("dangling", "true")
+	filteredOptions := networkTypes.ListOptions{
+		Filters: filterArgs,
+	}
 	mockClient.EXPECT().NetworkList(mock.Anything, filteredOptions).Return(nil, fmt.Errorf("failed to list networks"))
 
 	tests := []struct {
@@ -160,7 +166,7 @@ func Test_dockerNetworkService_NetworkList(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "failed network list",
+			name: "failed network list with filters",
 			fields: fields{
 				client: mockClient,
 			},

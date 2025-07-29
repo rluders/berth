@@ -26,7 +26,7 @@ clean:
 	rm -f $(APP_NAME)
 	@echo "Cleanup complete."
 
-test:
+test: generate-mocks
 	@echo "Running tests..."
 	$(GO) test ./...
 
