@@ -1,0 +1,25 @@
+version: 2
+builds:
+  - main: cmd/berth/main.go
+    binary: berth
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: rluders
+    name: berth
+  draft: false
+  prerelease: false
