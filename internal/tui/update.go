@@ -185,7 +185,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.inspectViewPort.Width = msg.Width - 4
 		m.inspectViewPort.Height = msg.Height - 6
-		// No need to set content here, it's done when logs are fetched
+		m.logViewPort.Width = msg.Width - 4
+		m.logViewPort.Height = msg.Height - 6
 
 	case []controller.Container:
 		rows := make([]table.Row, len(msg))
