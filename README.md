@@ -118,6 +118,16 @@ We welcome contributions to Berth! If you're interested in improving the project
 -   Reporting bugs or suggesting features via [GitHub Issues](https://github.com/rluders/berth/issues).
 -   Submitting pull requests for bug fixes or new features. Please ensure your code adheres to the existing style and includes appropriate tests.
 
+### Contributors
+
+<div align="center">
+  <a href="https://github.com/rluders/berth/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=rluders/berth" />
+  </a>
+</div>
+
+Made with [contrib.rocks](https://contrib.rocks).
+
 ## 📜 License
 
 This project is licensed under the [MIT License](LICENSE).
