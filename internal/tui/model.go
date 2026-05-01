@@ -98,14 +98,18 @@ type Model struct {
 	// Window
 	width  int
 	height int
+
+	// Column widths for the containers table (recomputed on resize).
+	containerColWidths []int
 }
 
 // InitialModel returns an initialized Model with default values.
 func InitialModel() Model {
 	slog.Debug("InitialModel called")
 
+	initWidths := computeWidths(116, containerCols) // 120-col default until first WindowSizeMsg
 	containerTable := table.New(
-		table.WithColumns(containerColumns()),
+		table.WithColumns(buildTableColumns(initWidths, containerCols)),
 		table.WithFocused(true),
 		table.WithHeight(0),
 	)
@@ -157,9 +161,10 @@ func InitialModel() Model {
 	fi.CharLimit = 60
 
 	return Model{
-		engineType:     engine.DetectEngine(),
-		currentView:    ContainersView,
-		containerTable: containerTable,
+		engineType:          engine.DetectEngine(),
+		currentView:         ContainersView,
+		containerTable:      containerTable,
+		containerColWidths:  initWidths,
 		imageTable:     imageTable,
 		volumeTable:    volumeTable,
 		networkTable:   networkTable,
@@ -177,19 +182,6 @@ func InitialModel() Model {
 			progress.WithDefaultGradient(),
 			progress.WithoutPercentage(),
 		),
-	}
-}
-
-// containerColumns defines the container table columns (PRD order: name, status, image, ports, cpu, mem, uptime).
-func containerColumns() []table.Column {
-	return []table.Column{
-		{Title: "Name", Width: 22},
-		{Title: "Status", Width: 16},
-		{Title: "Image", Width: 24},
-		{Title: "Ports", Width: 18},
-		{Title: "CPU%", Width: 6},
-		{Title: "Mem", Width: 10},
-		{Title: "Age", Width: 7},
 	}
 }
 
@@ -301,7 +293,7 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 		if stat.MemLimit > 0 {
 			memStr = utils.FormatBytes(stat.MemUsage)
 		}
-		return table.Row{
+		values := []string{
 			namePrefix + c.Names,
 			StatusColor(c.Status),
 			c.Image,
@@ -310,6 +302,11 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 			memStr,
 			utils.FormatAge(c.CreatedAt),
 		}
+		row := make(table.Row, len(containerCols))
+		for i, v := range values {
+			row[i] = renderCell(v, m.containerColWidths[i], containerCols[i].Align)
+		}
+		return row
 	}
 
 	if !m.groupByCompose {
@@ -337,10 +334,12 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 			prefix = "▶ "
 		}
 
-		rows = append(rows, table.Row{
-			prefix + g.project,
-			label, "", "", "", "", "",
-		})
+		groupValues := []string{prefix + g.project, label, "", "", "", "", ""}
+		groupRow := make(table.Row, len(containerCols))
+		for i, v := range groupValues {
+			groupRow[i] = renderCell(v, m.containerColWidths[i], containerCols[i].Align)
+		}
+		rows = append(rows, groupRow)
 		metas = append(metas, containerRowMeta{kind: rowKindGroup, groupName: g.project})
 
 		if !collapsed {

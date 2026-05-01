@@ -35,6 +35,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
+		m.containerColWidths = computeWidths(msg.Width-4, containerCols)
+		m.containerTable.SetColumns(buildTableColumns(m.containerColWidths, containerCols))
+
 		contentH := m.contentHeight()
 		m.containerTable.SetHeight(contentH)
 		m.imageTable.SetHeight(contentH)
