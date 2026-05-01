@@ -107,6 +107,10 @@ type Theme struct {
 	// Dividers
 	DividerStyle lipgloss.Style
 
+	// Container accordion
+	GroupHeaderStyle lipgloss.Style
+	GroupChildStyle  lipgloss.Style
+
 	// Legacy (referenced by view.go / update.go)
 	ModalStyle lipgloss.Style
 }
@@ -306,6 +310,13 @@ func DefaultTheme() Theme {
 	// Divider
 	t.DividerStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(colorSurface))
+
+	// Container accordion
+	t.GroupHeaderStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(colorMauve)).
+		Bold(true)
+	t.GroupChildStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(colorSubtext))
 
 	return t
 }

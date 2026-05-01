@@ -66,7 +66,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case containerListMsg:
 		slog.Debug("containerListMsg", "count", len(msg))
 		m.containers = []controller.Container(msg)
-		m.containerTable.SetRows(m.buildContainerRows())
+		rows, metas := m.buildContainerRows()
+		m.containerTable.SetRows(rows)
+		m.containerVisibleRows = metas
 		m.showSpinner = false
 		m.statusMessage = ""
 
@@ -105,7 +107,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for id, stat := range msg {
 			m.containerStats[id] = stat
 		}
-		m.containerTable.SetRows(m.buildContainerRows())
+		rows, metas := m.buildContainerRows()
+		m.containerTable.SetRows(rows)
+		m.containerVisibleRows = metas
 
 	case statsTickMsg:
 		var ids []string
