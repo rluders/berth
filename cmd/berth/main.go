@@ -42,7 +42,7 @@ func main() {
 			}
 		}()
 		slog.Debug("Initializing Bubble Tea program...")
-		program = tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
+		program = tea.NewProgram(tui.InitialModel(), tea.WithAltScreen(), tea.WithMouseCellMotion())
 	}()
 
 	slog.Debug("Running Bubble Tea program...")

@@ -1,45 +1,99 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/rluders/berth/internal/controller"
 	"github.com/rluders/berth/internal/engine"
+	"github.com/rluders/berth/internal/utils"
 )
-
 
 var currentTheme = DefaultTheme()
 
 // Model represents the main application model.
 type Model struct {
-	engineType            engine.EngineType
-	currentView           ViewType
-	containerTable        table.Model
-	imageTable            table.Model
-	volumeTable           table.Model
-	networkTable          table.Model
-	systemInfo            controller.SystemInfo
-	inspectViewPort       viewport.Model
-	inspectReady          bool
-	inspectRawContent     string
+	engineType  engine.EngineType
+	currentView ViewType
+	viewStack   []ViewType
+
+	// Tables
+	containerTable table.Model
+	imageTable     table.Model
+	volumeTable    table.Model
+	networkTable   table.Model
+
+	// Raw data (for filtering / grouping)
+	containers []controller.Container
+	images     []controller.Image
+	volumes    []controller.Volume
+
+	// Container stats
+	containerStats map[string]controller.ContainerStat
+
+	// Compose group toggle
+	groupByCompose bool
+
+	// System info
+	systemInfo controller.SystemInfo
+
+	// Inspect view
+	inspectViewPort   viewport.Model
+	inspectReady      bool
+	inspectRawContent string
+	currentInspectID  string
+
+	// Logs view
 	logViewPort           viewport.Model
 	logReady              bool
-	err                   error
-	statusMessage         string
-	showSpinner           bool
-	spinner               spinner.Model
-	width                 int
-	height                int
+	logLines              []string
+	logFollowing          bool
+	logCh                 chan string
+	logCancel             context.CancelFunc
 	currentLogContainerID string
-	currentInspectID      string
-	viewStack             []ViewType
+	showLineNumbers       bool
+
+	// Details view
+	detailsViewPort  viewport.Model
+	detailsReady     bool
+	currentDetailsID string
+	currentDetails   controller.ContainerDetails
+
+	// Search / filter
+	filterInput  textinput.Model
+	filterActive bool
+
+	// Modal dialog (replaces old confirmAction)
+	modal *Modal
+
+	// Help overlay
+	showHelp  bool
+	helpModel help.Model
+
+	// Progress bar (cleanup / prune operations)
+	progressBar     progress.Model
+	progressVisible bool
+	progressLabel   string
+	progressDone    bool
+
+	// Status
+	err           error
+	statusMessage string
+	showSpinner   bool
+	spinner       spinner.Model
+
+	// Window
+	width  int
+	height int
 }
 
 // InitialModel returns an initialized Model with default values.
@@ -47,15 +101,7 @@ func InitialModel() Model {
 	slog.Debug("InitialModel called")
 
 	containerTable := table.New(
-		table.WithColumns([]table.Column{
-			{Title: "ID", Width: 12},
-			{Title: "Image", Width: 20},
-			{Title: "Command", Width: 30},
-			{Title: "Created", Width: 15},
-			{Title: "Status", Width: 20},
-			{Title: "Ports", Width: 20},
-			{Title: "Names", Width: 20},
-		}),
+		table.WithColumns(containerColumns()),
 		table.WithFocused(true),
 		table.WithHeight(0),
 	)
@@ -102,24 +148,50 @@ func InitialModel() Model {
 	volumeTable.SetStyles(s)
 	networkTable.SetStyles(s)
 
+	fi := textinput.New()
+	fi.Placeholder = "filter..."
+	fi.CharLimit = 60
+
 	return Model{
-		engineType:      engine.DetectEngine(),
-		currentView:     ContainersView,
-		containerTable:  containerTable,
-		imageTable:      imageTable,
-		volumeTable:     volumeTable,
-		networkTable:    networkTable,
-		systemInfo:      controller.SystemInfo{},
+		engineType:     engine.DetectEngine(),
+		currentView:    ContainersView,
+		containerTable: containerTable,
+		imageTable:     imageTable,
+		volumeTable:    volumeTable,
+		networkTable:   networkTable,
+		containerStats: make(map[string]controller.ContainerStat),
+		systemInfo:     controller.SystemInfo{},
 		inspectViewPort: viewport.New(0, 0),
 		logViewPort:     viewport.New(0, 0),
-		spinner:         spinner.New(),
+		detailsViewPort: viewport.New(0, 0),
+		logFollowing: true,
+		filterInput:  fi,
+		spinner:      spinner.New(),
+		helpModel:    help.New(),
+		progressBar: progress.New(
+			progress.WithDefaultGradient(),
+			progress.WithoutPercentage(),
+		),
+	}
+}
+
+// containerColumns defines the container table columns (PRD order: name, status, image, ports, cpu, mem, uptime).
+func containerColumns() []table.Column {
+	return []table.Column{
+		{Title: "Name", Width: 22},
+		{Title: "Status", Width: 16},
+		{Title: "Image", Width: 24},
+		{Title: "Ports", Width: 18},
+		{Title: "CPU%", Width: 6},
+		{Title: "Mem", Width: 10},
+		{Title: "Age", Width: 7},
 	}
 }
 
 // Init initializes the Bubble Tea program.
 func (m Model) Init() tea.Cmd {
 	slog.Debug("Init called")
-	return tea.Batch(fetchAllCmd(), m.spinner.Tick)
+	return tea.Batch(fetchAllCmd(), m.spinner.Tick, statsTickCmd(), refreshTickCmd())
 }
 
 func (m Model) getViewName() string {
@@ -137,32 +209,29 @@ func (m Model) getViewName() string {
 	case InspectView:
 		return fmt.Sprintf("Inspect %s", m.currentInspectID)
 	case LogsView:
-		return fmt.Sprintf("Logs for %s", m.currentLogContainerID)
+		return fmt.Sprintf("Logs  %s", m.currentLogContainerID)
+	case DetailsView:
+		return fmt.Sprintf("Details  %s", m.currentDetailsID)
 	}
 	return "Unknown"
 }
 
-func (m Model) getFooterHelp() string {
-	nav := "1:Containers • 2:Images • 3:Volumes • 4:Networks • 5:System"
-	switch m.currentView {
-	case ContainersView:
-		return nav + " • s:Start • x:Stop • d:Remove • l:Logs • i:Inspect • q:Quit"
-	case ImagesView:
-		return nav + " • d:Remove • q:Quit"
-	case VolumesView:
-		return nav + " • d:Remove • q:Quit"
-	case NetworksView:
-		return nav + " • i:Inspect • q:Quit"
-	case SystemView:
-		return nav + " • b:Basic Cleanup • a:Advanced Cleanup • t:Total Cleanup • q:Quit"
-	case InspectView, LogsView:
-		return "q/esc:Return • ↑/↓:Scroll"
-	}
-	return "q:Quit"
-}
 
 func (m Model) headerText() string {
-	return fmt.Sprintf("Berth - %s - %s Engine", m.getViewName(), strings.ToUpper(string(m.engineType)))
+	eng := strings.ToUpper(string(m.engineType))
+	view := m.getViewName()
+	extra := ""
+	if m.currentView == LogsView {
+		mode := "follow"
+		if !m.logFollowing {
+			mode = "paused"
+		}
+		extra = fmt.Sprintf(" [%s]", mode)
+	}
+	if m.groupByCompose && m.currentView == ContainersView {
+		extra = " [grouped]"
+	}
+	return fmt.Sprintf("Berth  %s  %s Engine%s", view, eng, extra)
 }
 
 func (m *Model) pushView(view ViewType) {
@@ -179,19 +248,124 @@ func (m *Model) popView() {
 	}
 }
 
-// contentHeight calculates available height for the main content area
-// following Golden Rule #1: subtract header + footer + app padding.
+// contentHeight calculates available height for the main content area.
 func (m Model) contentHeight() int {
 	h := m.height
-	h -= lipgloss.Height(currentTheme.HeaderStyle.Render(m.headerText()))
-	h -= currentTheme.FooterStyle.GetVerticalFrameSize()
-	h -= currentTheme.AppStyle.GetVerticalFrameSize()
-	// status message adds an extra line above the footer help
-	if m.statusMessage != "" {
+	h -= 1 // header row
+	h -= 1 // tab bar row
+	h -= 2 // footer (key hints + engine line)
+	if m.statusMessage != "" || m.showSpinner {
 		h -= 1
+	}
+	if m.filterActive {
+		h -= 1
+	}
+	if m.progressVisible {
+		h -= 2 // label + bar
 	}
 	if h < 0 {
 		return 0
 	}
 	return h
+}
+
+// buildContainerRows produces filtered and optionally compose-grouped table rows.
+func (m Model) buildContainerRows() []table.Row {
+	filter := strings.ToLower(m.filterInput.Value())
+
+	type group struct {
+		project string
+		rows    []table.Row
+	}
+	var groups []group
+	projectIndex := map[string]int{}
+
+	for _, c := range m.containers {
+		// Filter
+		if filter != "" {
+			haystack := strings.ToLower(c.Names + " " + c.Image + " " + c.Status)
+			if !strings.Contains(haystack, filter) {
+				continue
+			}
+		}
+
+		stat := m.containerStats[c.ID]
+		cpuStr := fmt.Sprintf("%.1f", stat.CPUPercent)
+		memStr := ""
+		if stat.MemLimit > 0 {
+			memStr = utils.FormatBytes(stat.MemUsage)
+		}
+		ageStr := utils.FormatAge(c.CreatedAt)
+
+		row := table.Row{
+			c.Names,
+			StatusColor(c.Status),
+			c.Image,
+			c.Ports,
+			cpuStr,
+			memStr,
+			ageStr,
+		}
+
+		if m.groupByCompose {
+			project := c.Labels["com.docker.compose.project"]
+			if project == "" {
+				project = "_"
+			}
+			if idx, ok := projectIndex[project]; ok {
+				groups[idx].rows = append(groups[idx].rows, row)
+			} else {
+				projectIndex[project] = len(groups)
+				groups = append(groups, group{project: project, rows: []table.Row{row}})
+			}
+		} else {
+			groups = append(groups, group{rows: []table.Row{row}})
+		}
+	}
+
+	var rows []table.Row
+	if m.groupByCompose {
+		for _, g := range groups {
+			if g.project != "_" {
+				// Insert visual separator row for the project name
+				rows = append(rows, table.Row{"── " + g.project + " ──", "", "", "", "", "", ""})
+			}
+			rows = append(rows, g.rows...)
+		}
+	} else {
+		for _, g := range groups {
+			rows = append(rows, g.rows...)
+		}
+	}
+	return rows
+}
+
+// buildImageRows produces filtered image rows.
+func (m Model) buildImageRows() []table.Row {
+	filter := strings.ToLower(m.filterInput.Value())
+	var rows []table.Row
+	for _, img := range m.images {
+		if filter != "" {
+			if !strings.Contains(strings.ToLower(img.Repository+" "+img.Tag), filter) {
+				continue
+			}
+		}
+		rows = append(rows, table.Row{img.ID, img.Repository, img.Tag, img.Size, img.Created})
+	}
+	return rows
+}
+
+// buildVolumeRows produces filtered volume rows.
+func (m Model) buildVolumeRows() []table.Row {
+	filter := strings.ToLower(m.filterInput.Value())
+	var rows []table.Row
+	for _, v := range m.volumes {
+		if filter != "" {
+			if !strings.Contains(strings.ToLower(v.Name), filter) {
+				continue
+			}
+		}
+		rows = append(rows, table.Row{v.Name, v.Driver, v.Scope, v.Mountpoint})
+	}
+	return rows
 }
