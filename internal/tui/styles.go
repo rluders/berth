@@ -1,4 +1,3 @@
-// Package tui provides the Terminal User Interface for Berth.
 package tui
 
 import "github.com/charmbracelet/lipgloss"
