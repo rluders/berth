@@ -16,8 +16,8 @@ type GlobalKeys struct {
 
 // ContainerKeys holds key bindings for the containers view.
 type ContainerKeys struct {
-	Details  key.Binding
-	Start    key.Binding
+	Details key.Binding
+	Start   key.Binding
 	Stop     key.Binding
 	Restart  key.Binding
 	Delete   key.Binding
@@ -28,6 +28,16 @@ type ContainerKeys struct {
 	Group    key.Binding
 	Expand   key.Binding
 	Collapse key.Binding
+}
+
+// ComposeKeys holds key bindings for compose project-level actions.
+type ComposeKeys struct {
+	Up       key.Binding
+	UpBuild  key.Binding
+	Recreate key.Binding
+	Down     key.Binding
+	Pull     key.Binding
+	Build    key.Binding
 }
 
 // ImageKeys holds key bindings for the images view.
@@ -77,6 +87,7 @@ type FilterKeys struct {
 var Keys = struct {
 	Global    GlobalKeys
 	Container ContainerKeys
+	Compose   ComposeKeys
 	Image     ImageKeys
 	Volume    VolumeKeys
 	Network   NetworkKeys
@@ -167,6 +178,32 @@ var Keys = struct {
 		Collapse: key.NewBinding(
 			key.WithKeys("left"),
 			key.WithHelp("←", "collapse group"),
+		),
+	},
+	Compose: ComposeKeys{
+		Up: key.NewBinding(
+			key.WithKeys("u"),
+			key.WithHelp("u", "compose up"),
+		),
+		UpBuild: key.NewBinding(
+			key.WithKeys("U"),
+			key.WithHelp("U", "compose up --build"),
+		),
+		Recreate: key.NewBinding(
+			key.WithKeys("R"),
+			key.WithHelp("R", "compose recreate"),
+		),
+		Down: key.NewBinding(
+			key.WithKeys("d"),
+			key.WithHelp("d", "compose down"),
+		),
+		Pull: key.NewBinding(
+			key.WithKeys("p"),
+			key.WithHelp("p", "compose pull"),
+		),
+		Build: key.NewBinding(
+			key.WithKeys("b"),
+			key.WithHelp("b", "compose build"),
 		),
 	},
 	Image: ImageKeys{

@@ -20,7 +20,7 @@ func FormatAge(unixTime int64) string {
 	}
 }
 
-// FormatBytes formats a byte count as a human-readable string (e.g. "45.2MB").
+// FormatBytes formats a byte count as a human-readable string (e.g. "512KB", "1.2GB").
 func FormatBytes(b uint64) string {
 	const unit = 1024
 	if b < unit {
@@ -31,5 +31,10 @@ func FormatBytes(b uint64) string {
 		div *= unit
 		exp++
 	}
-	return fmt.Sprintf("%.1f%cB", float64(b)/float64(div), "KMGTPE"[exp])
+	val := float64(b) / float64(div)
+	uc := "KMGTPE"[exp]
+	if val == float64(uint64(val)) {
+		return fmt.Sprintf("%d%cB", uint64(val), uc)
+	}
+	return fmt.Sprintf("%.1f%cB", val, uc)
 }

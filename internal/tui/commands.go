@@ -168,6 +168,20 @@ func startLogStreamCmd(id string) (chan string, context.CancelFunc, tea.Cmd) {
 	return ch, cancel, waitForLogLineCmd(ch)
 }
 
+func startGroupLogStreamCmd(containers []controller.Container) (chan string, context.CancelFunc, tea.Cmd) {
+	ch := make(chan string, 500)
+	ctx, cancel := context.WithCancel(context.Background())
+	entryCh := make(chan controller.LogEntry, 500)
+	go controller.StreamMultiContainerLogs(ctx, containers, entryCh)
+	go func() {
+		defer close(ch)
+		for entry := range entryCh {
+			ch <- "[" + entry.ContainerName + "] " + entry.Line
+		}
+	}()
+	return ch, cancel, waitForLogLineCmd(ch)
+}
+
 func waitForLogLineCmd(ch <-chan string) tea.Cmd {
 	return func() tea.Msg {
 		line, ok := <-ch
@@ -276,6 +290,62 @@ func totalCleanupCmd() tea.Cmd {
 			return errMsg{err}
 		}
 		return progressMsg{percent: 1.0, label: "Total cleanup: " + output, done: true}
+	}
+}
+
+// ── Compose commands ──────────────────────────────────────────────────────────
+
+func composeUpCmd(project, workDir string) tea.Cmd {
+	return func() tea.Msg {
+		if err := controller.ComposeUp(project, workDir); err != nil {
+			return errMsg{err}
+		}
+		return statusMsg(fmt.Sprintf("[%s] compose up done.", project))
+	}
+}
+
+func composeUpBuildCmd(project, workDir string) tea.Cmd {
+	return func() tea.Msg {
+		if err := controller.ComposeUpBuild(project, workDir); err != nil {
+			return errMsg{err}
+		}
+		return statusMsg(fmt.Sprintf("[%s] compose up --build done.", project))
+	}
+}
+
+func composeRecreateCmd(project, workDir string) tea.Cmd {
+	return func() tea.Msg {
+		if err := controller.ComposeRecreate(project, workDir); err != nil {
+			return errMsg{err}
+		}
+		return statusMsg(fmt.Sprintf("[%s] compose recreate done.", project))
+	}
+}
+
+func composeDownCmd(project, workDir string) tea.Cmd {
+	return func() tea.Msg {
+		if err := controller.ComposeDown(project, workDir); err != nil {
+			return errMsg{err}
+		}
+		return statusMsg(fmt.Sprintf("[%s] compose down done.", project))
+	}
+}
+
+func composePullCmd(project, workDir string) tea.Cmd {
+	return func() tea.Msg {
+		if err := controller.ComposePull(project, workDir); err != nil {
+			return errMsg{err}
+		}
+		return statusMsg(fmt.Sprintf("[%s] compose pull done.", project))
+	}
+}
+
+func composeBuildCmd(project, workDir string) tea.Cmd {
+	return func() tea.Msg {
+		if err := controller.ComposeBuild(project, workDir); err != nil {
+			return errMsg{err}
+		}
+		return statusMsg(fmt.Sprintf("[%s] compose build done.", project))
 	}
 }
 

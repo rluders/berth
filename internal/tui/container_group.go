@@ -1,9 +1,6 @@
 package tui
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/rluders/berth/internal/controller"
 )
 
@@ -52,14 +49,20 @@ func buildComposeGroups(containers []controller.Container) (groups []composeGrou
 func groupAggStatus(containers []controller.Container) (running, total int) {
 	for _, c := range containers {
 		total++
-		if strings.HasPrefix(c.Status, "Up") || c.Status == "running" {
+		if c.State == "running" {
 			running++
 		}
 	}
 	return
 }
 
-// aggStatusLabel formats a "2/3 running" label.
-func aggStatusLabel(running, total int) string {
-	return fmt.Sprintf("%d/%d running", running, total)
+// findGroupContainers returns all containers belonging to the given compose project.
+func findGroupContainers(containers []controller.Container, project string) []controller.Container {
+	var result []controller.Container
+	for _, c := range containers {
+		if c.Labels["com.docker.compose.project"] == project {
+			result = append(result, c)
+		}
+	}
+	return result
 }

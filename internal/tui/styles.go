@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -32,8 +33,8 @@ const (
 // Theme defines all visual styles for the application.
 type Theme struct {
 	// App chrome
-	AppStyle  lipgloss.Style
-	AppBg     lipgloss.Style
+	AppStyle lipgloss.Style
+	AppBg    lipgloss.Style
 
 	// Header
 	HeaderStyle     lipgloss.Style
@@ -41,15 +42,16 @@ type Theme struct {
 	HeaderEngStyle  lipgloss.Style
 
 	// Tabs
-	TabBarStyle    lipgloss.Style
-	ActiveTabStyle lipgloss.Style
+	TabBarStyle      lipgloss.Style
+	ActiveTabStyle   lipgloss.Style
 	InactiveTabStyle lipgloss.Style
-	TabCountStyle  lipgloss.Style
+	TabCountStyle    lipgloss.Style
 
 	// Footer
-	FooterStyle      lipgloss.Style
-	FooterKeyStyle   lipgloss.Style
-	FooterDescStyle  lipgloss.Style
+	FooterStyle         lipgloss.Style
+	FooterKeyStyle      lipgloss.Style
+	FooterDescStyle     lipgloss.Style
+	CommandPreviewStyle lipgloss.Style
 
 	// Status
 	StatusMessageStyle lipgloss.Style
@@ -64,11 +66,11 @@ type Theme struct {
 	TableRowAltStyle   lipgloss.Style
 
 	// Badges
-	BadgeRunningStyle   lipgloss.Style
-	BadgeStoppedStyle   lipgloss.Style
-	BadgePausedStyle    lipgloss.Style
-	BadgeRestartStyle   lipgloss.Style
-	BadgeCreatedStyle   lipgloss.Style
+	BadgeRunningStyle lipgloss.Style
+	BadgeStoppedStyle lipgloss.Style
+	BadgePausedStyle  lipgloss.Style
+	BadgeRestartStyle lipgloss.Style
+	BadgeCreatedStyle lipgloss.Style
 
 	// Cards (details view)
 	CardStyle      lipgloss.Style
@@ -167,6 +169,9 @@ func DefaultTheme() Theme {
 		Bold(true)
 	t.FooterDescStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(colorSubtext))
+	t.CommandPreviewStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(colorMuted)).
+		Italic(true)
 
 	// Status
 	t.StatusMessageStyle = lipgloss.NewStyle().
@@ -321,6 +326,47 @@ func DefaultTheme() Theme {
 	return t
 }
 
+var (
+	styleStatusRunning    = lipgloss.NewStyle().Foreground(lipgloss.Color(colorGreen))
+	styleStatusStopped    = lipgloss.NewStyle().Foreground(lipgloss.Color(colorSubtext))
+	styleStatusRestarting = lipgloss.NewStyle().Foreground(lipgloss.Color(colorYellow))
+	styleStatusPaused     = lipgloss.NewStyle().Foreground(lipgloss.Color(colorBlue))
+	styleStatusDead       = lipgloss.NewStyle().Foreground(lipgloss.Color(colorRed))
+	styleStatusDim        = lipgloss.NewStyle().Foreground(lipgloss.Color(colorMuted))
+)
+
+func normalizeStatus(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	switch s {
+	case "up":
+		return "running"
+	case "stopped":
+		return "exited"
+	}
+	return s
+}
+
+// FormatStatus returns a lipgloss-styled icon + state string for a container state.
+func FormatStatus(state string) string {
+	state = normalizeStatus(state)
+	switch state {
+	case "running":
+		return styleStatusRunning.Render("● " + state)
+	case "restarting":
+		return styleStatusRestarting.Render("● " + state)
+	case "paused":
+		return styleStatusPaused.Render("● " + state)
+	case "dead":
+		return styleStatusDead.Render("● " + state)
+	case "exited":
+		return styleStatusStopped.Render("○ " + state)
+	case "created":
+		return styleStatusDim.Render("○ " + state)
+	default:
+		return styleStatusDim.Render("● " + state)
+	}
+}
+
 // StatusBadge returns a styled status badge string for a container status.
 func StatusBadge(status string) string {
 	switch {
@@ -337,19 +383,19 @@ func StatusBadge(status string) string {
 	}
 }
 
-// StatusColor returns a lipgloss-styled string for a container status (plain text, no badge).
-func StatusColor(status string) string {
+// StatusColor delegates to FormatStatus for backward compatibility.
+func StatusColor(state string) string { return FormatStatus(state) }
+
+// GroupStatusColor returns a lipgloss-styled aggregate status for a compose group.
+func GroupStatusColor(running, total int) string {
+	label := fmt.Sprintf("%d/%d", running, total)
 	switch {
-	case strings.HasPrefix(status, "Up"), status == "running":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorGreen)).Render(status)
-	case status == "paused":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorYellow)).Render(status)
-	case status == "restarting":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorBlue)).Render(status)
-	case status == "created":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorTeal)).Render(status)
+	case running == total:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorGreen)).Render("● " + label)
+	case running > 0:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorYellow)).Render("◑ " + label)
 	default:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorRed)).Render(status)
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorSubtext)).Render("○ " + label)
 	}
 }
 

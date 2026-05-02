@@ -110,6 +110,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for id, stat := range msg {
 			m.containerStats[id] = stat
 		}
+		running := map[string]bool{}
+		for _, c := range m.containers {
+			if c.State == "running" {
+				running[c.ID] = true
+			}
+		}
+		for id := range m.containerStats {
+			if !running[id] {
+				delete(m.containerStats, id)
+			}
+		}
 		rows, metas := m.buildContainerRows()
 		m.containerTable.SetRows(rows)
 		m.containerVisibleRows = metas

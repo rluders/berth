@@ -188,6 +188,15 @@ func (m Model) renderContent() string {
 func (m Model) renderLogsView() string {
 	th := currentTheme
 
+	title := m.currentLogContainerID
+	if m.currentLogGroupName != "" {
+		title = m.currentLogGroupName
+	}
+	titleBar := lipgloss.NewStyle().
+		Padding(0, 1).
+		Bold(true).
+		Render("Logs: " + title)
+
 	var badge string
 	if m.logFollowing {
 		badge = th.LogFollowStyle.Render("▶ LIVE")
@@ -206,7 +215,7 @@ func (m Model) renderLogsView() string {
 		Padding(0, 1).
 		Render(badge + numBadge)
 
-	return lipgloss.JoinVertical(lipgloss.Left, indicator, m.logViewPort.View())
+	return lipgloss.JoinVertical(lipgloss.Left, titleBar, indicator, m.logViewPort.View())
 }
 
 // renderSystem renders a dashboard-style system info view.
@@ -269,10 +278,65 @@ func (m Model) renderSystem() string {
 	)
 }
 
+// BuildCommandPreview returns the docker/compose command equivalent for the current selection.
+func (m Model) BuildCommandPreview() string {
+	if m.currentView != ContainersView {
+		return ""
+	}
+	if len(m.containerVisibleRows) == 0 {
+		return " "
+	}
+	idx := m.containerTable.Cursor()
+	if idx >= len(m.containerVisibleRows) {
+		return " "
+	}
+	meta := m.containerVisibleRows[idx]
+
+	if meta.kind == rowKindGroup {
+		project := meta.groupName
+		switch m.lastActionKey {
+		case "U":
+			return fmt.Sprintf("docker compose -p %s up -d --build", project)
+		case "R":
+			return fmt.Sprintf("docker compose -p %s up -d --force-recreate", project)
+		case "d":
+			return fmt.Sprintf("docker compose -p %s down", project)
+		case "p":
+			return fmt.Sprintf("docker compose -p %s pull", project)
+		case "b":
+			return fmt.Sprintf("docker compose -p %s build", project)
+		default:
+			return fmt.Sprintf("docker compose -p %s up -d", project)
+		}
+	}
+
+	name := meta.containerName
+	switch m.lastActionKey {
+	case "s":
+		return fmt.Sprintf("docker start %s", name)
+	case "x":
+		return fmt.Sprintf("docker stop %s", name)
+	case "r":
+		return fmt.Sprintf("docker restart %s", name)
+	case "d":
+		return fmt.Sprintf("docker rm %s", name)
+	case "e":
+		return fmt.Sprintf("docker exec -it %s sh", name)
+	default:
+		return fmt.Sprintf("docker logs -f %s", name)
+	}
+}
+
 // renderFooter builds the bottom bar with status, hints, and optional overlays.
 func (m Model) renderFooter() string {
 	th := currentTheme
 	var parts []string
+
+	// Command preview (always first, ContainersView only)
+	if preview := m.BuildCommandPreview(); preview != "" {
+		prefix := th.FooterKeyStyle.Render("$ ")
+		parts = append(parts, prefix+th.CommandPreviewStyle.Render(preview))
+	}
 
 	// Filter bar
 	if m.filterActive {
@@ -315,6 +379,18 @@ func (m Model) renderKeyHints() string {
 	var viewHints []hint
 	switch m.currentView {
 	case ContainersView:
+		if m.groupByCompose {
+			idx := m.containerTable.Cursor()
+			if idx >= 0 && idx < len(m.containerVisibleRows) && m.containerVisibleRows[idx].kind == rowKindGroup {
+				viewHints = []hint{
+					{"↑/↓", "move"}, {"→/←", "expand/collapse"},
+					{"u", "up"}, {"U", "up+build"}, {"R", "recreate"},
+					{"d", "down"}, {"p", "pull"}, {"b", "build"},
+					{"/", "filter"}, {"g", "ungroup"},
+				}
+				break
+			}
+		}
 		viewHints = []hint{
 			{"↑/↓", "move"}, {"enter", "details"}, {"l", "logs"},
 			{"i", "inspect"}, {"s", "start"}, {"x", "stop"},

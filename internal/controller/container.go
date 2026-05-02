@@ -34,6 +34,7 @@ type Container struct {
 	Command   string
 	CreatedAt int64
 	Status    string
+	State     string
 	Ports     string
 	Names     string
 	Labels    map[string]string
@@ -123,6 +124,7 @@ func ListContainers() ([]Container, error) {
 			Command:   c.Command,
 			CreatedAt: c.Created,
 			Status:    c.Status,
+			State:     c.State,
 			Ports:     ports,
 			Names:     strings.TrimPrefix(strings.Join(c.Names, ","), "/"),
 			Labels:    c.Labels,

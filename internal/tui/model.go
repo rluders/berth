@@ -64,6 +64,7 @@ type Model struct {
 	logCh                 chan string
 	logCancel             context.CancelFunc
 	currentLogContainerID string
+	currentLogGroupName   string
 	showLineNumbers       bool
 
 	// Details view
@@ -101,6 +102,9 @@ type Model struct {
 
 	// Column widths for the containers table (recomputed on resize).
 	containerColWidths []int
+
+	// Last action key pressed in ContainersView (drives command preview).
+	lastActionKey string
 }
 
 // InitialModel returns an initialized Model with default values.
@@ -206,6 +210,9 @@ func (m Model) getViewName() string {
 	case InspectView:
 		return fmt.Sprintf("Inspect %s", m.currentInspectID)
 	case LogsView:
+		if m.currentLogGroupName != "" {
+			return fmt.Sprintf("Logs  %s", m.currentLogGroupName)
+		}
 		return fmt.Sprintf("Logs  %s", m.currentLogContainerID)
 	case DetailsView:
 		return fmt.Sprintf("Details  %s", m.currentDetailsID)
@@ -250,7 +257,10 @@ func (m Model) contentHeight() int {
 	h := m.height
 	h -= 1 // header row
 	h -= 1 // tab bar row
-	h -= 2 // footer (key hints + engine line)
+	h -= 2 // footer (key hints + base)
+	if m.currentView == ContainersView {
+		h -= 1 // command preview line
+	}
 	if m.statusMessage != "" || m.showSpinner {
 		h -= 1
 	}
@@ -275,7 +285,7 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 	var filtered []controller.Container
 	for _, c := range m.containers {
 		if filter != "" {
-			haystack := strings.ToLower(c.Names + " " + c.Image + " " + c.Status)
+			haystack := strings.ToLower(c.Names + " " + c.Image + " " + c.Status + " " + c.State)
 			if !strings.Contains(haystack, filter) {
 				continue
 			}
@@ -286,32 +296,42 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 	var rows []table.Row
 	var metas []containerRowMeta
 
-	containerRow := func(c controller.Container, namePrefix string) table.Row {
-		stat := m.containerStats[c.ID]
-		cpuStr := fmt.Sprintf("%.1f", stat.CPUPercent)
-		memStr := ""
-		if stat.MemLimit > 0 {
-			memStr = utils.FormatBytes(stat.MemUsage)
+	containerRow := func(c controller.Container, namePrefix string, inGroup bool) table.Row {
+		cpuStr := "-"
+		memStr := "-"
+		if c.State == "running" {
+			stat, ok := m.containerStats[c.ID]
+			if !ok {
+				cpuStr = "..."
+				memStr = "..."
+			} else {
+				cpuStr = fmt.Sprintf("%.1f", stat.CPUPercent)
+				if stat.MemLimit > 0 {
+					memStr = utils.FormatBytes(stat.MemUsage)
+				} else {
+					memStr = "..."
+				}
+			}
+		}
+		name := namePrefix + c.Names
+		if inGroup {
+			name = currentTheme.GroupChildStyle.Render(name)
 		}
 		values := []string{
-			namePrefix + c.Names,
-			StatusColor(c.Status),
+			name,
+			FormatStatus(c.State),
 			c.Image,
 			c.Ports,
 			cpuStr,
 			memStr,
 			utils.FormatAge(c.CreatedAt),
 		}
-		row := make(table.Row, len(containerCols))
-		for i, v := range values {
-			row[i] = renderCell(v, m.containerColWidths[i], containerCols[i].Align)
-		}
-		return row
+		return RenderRow(containerCols, m.containerColWidths, values)
 	}
 
 	if !m.groupByCompose {
 		for _, c := range filtered {
-			rows = append(rows, containerRow(c, ""))
+			rows = append(rows, containerRow(c, "", false))
 			metas = append(metas, containerRowMeta{
 				kind:          rowKindContainer,
 				containerID:   c.ID,
@@ -326,7 +346,7 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 
 	for _, g := range groups {
 		running, total := groupAggStatus(g.containers)
-		label := aggStatusLabel(running, total)
+		label := GroupStatusColor(running, total)
 		collapsed := m.collapsedGroups[g.project]
 
 		prefix := "▼ "
@@ -334,17 +354,13 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 			prefix = "▶ "
 		}
 
-		groupValues := []string{prefix + g.project, label, "", "", "", "", ""}
-		groupRow := make(table.Row, len(containerCols))
-		for i, v := range groupValues {
-			groupRow[i] = renderCell(v, m.containerColWidths[i], containerCols[i].Align)
-		}
-		rows = append(rows, groupRow)
+		groupValues := []string{currentTheme.GroupHeaderStyle.Render(prefix + g.project), label, "", "", "", "", ""}
+		rows = append(rows, RenderRow(containerCols, m.containerColWidths, groupValues))
 		metas = append(metas, containerRowMeta{kind: rowKindGroup, groupName: g.project})
 
 		if !collapsed {
 			for _, c := range g.containers {
-				rows = append(rows, containerRow(c, "  › "))
+				rows = append(rows, containerRow(c, "  › ", true))
 				metas = append(metas, containerRowMeta{
 					kind:          rowKindContainer,
 					groupName:     g.project,
@@ -357,7 +373,7 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 
 	// Standalone containers (no compose label) appended without a group header.
 	for _, c := range standalone {
-		rows = append(rows, containerRow(c, ""))
+		rows = append(rows, containerRow(c, "", false))
 		metas = append(metas, containerRowMeta{
 			kind:          rowKindContainer,
 			containerID:   c.ID,

@@ -46,6 +46,7 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 			m.stopLogStream()
 			m.popView()
 			m.logReady = false
+			m.currentLogGroupName = ""
 			return m, nil
 		}
 		return m, tea.Quit
@@ -123,6 +124,14 @@ func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	m.containerTable, cmd = m.containerTable.Update(msg)
 	cmds = append(cmds, cmd)
 
+	// Track last action key for command preview; movement keys reset to default.
+	switch msg.String() {
+	case "s", "x", "r", "d", "l", "i", "e", "u", "U", "R", "p", "b":
+		m.lastActionKey = msg.String()
+	default:
+		m.lastActionKey = ""
+	}
+
 	switch {
 	case key.Matches(msg, Keys.Container.Filter):
 		m.filterActive = true
@@ -157,13 +166,31 @@ func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		switch meta.kind {
 		case rowKindGroup:
 			switch {
-			case key.Matches(msg, Keys.Container.Expand),
-				key.Matches(msg, Keys.Container.Details):
+			case key.Matches(msg, Keys.Container.Details):
+				m.collapsedGroups[meta.groupName] = !m.collapsedGroups[meta.groupName]
+				rebuildRows()
+			case key.Matches(msg, Keys.Container.Expand):
 				delete(m.collapsedGroups, meta.groupName)
 				rebuildRows()
 			case key.Matches(msg, Keys.Container.Collapse):
 				m.collapsedGroups[meta.groupName] = true
 				rebuildRows()
+			case key.Matches(msg, Keys.Container.Logs):
+				m.stopLogStream()
+				m.logLines = nil
+				m.logFollowing = true
+				m.currentLogGroupName = meta.groupName
+				m.currentLogContainerID = ""
+				group := findGroupContainers(m.containers, meta.groupName)
+				m.pushView(LogsView)
+				m.logReady = true
+				ch, cancel, waitCmd := startGroupLogStreamCmd(group)
+				m.logCh = ch
+				m.logCancel = cancel
+				cmds = append(cmds, waitCmd)
+			default:
+				workDir := m.composeWorkDir(meta.groupName)
+				return m.dispatchComposeAction(msg, meta.groupName, workDir, cmds)
 			}
 			return m, tea.Batch(cmds...)
 
@@ -173,7 +200,6 @@ func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 				rebuildRows()
 				return m, tea.Batch(cmds...)
 			}
-			// Fall through to action dispatch using metadata IDs.
 			return m.dispatchContainerAction(msg, meta.containerID, meta.containerName, cmds)
 		}
 
@@ -196,7 +222,7 @@ func (m Model) dispatchContainerAction(msg tea.KeyMsg, id, name string, cmds []t
 		m.pushView(DetailsView)
 		m.currentDetailsID = id
 		m.detailsReady = false
-		m.statusMessage = "Loading details..."
+		m.statusMessage = fmt.Sprintf("Loading details %s...", name)
 		m.showSpinner = true
 		cmds = append(cmds, fetchDetailsCmd(id), m.spinner.Tick)
 	case key.Matches(msg, Keys.Container.Start):
@@ -238,6 +264,53 @@ func (m Model) dispatchContainerAction(msg tea.KeyMsg, id, name string, cmds []t
 		cmds = append(cmds, inspectContainerCmd(id), m.spinner.Tick)
 	case key.Matches(msg, Keys.Container.Exec):
 		cmds = append(cmds, execShellCmd(id))
+	}
+	return m, tea.Batch(cmds...)
+}
+
+// composeWorkDir returns the working directory for a compose project by checking container labels.
+func (m Model) composeWorkDir(project string) string {
+	for _, c := range m.containers {
+		if c.Labels["com.docker.compose.project"] == project {
+			if wd := c.Labels["com.docker.compose.project.working_dir"]; wd != "" {
+				return wd
+			}
+		}
+	}
+	return ""
+}
+
+// dispatchComposeAction handles compose project-level action keys when a group row is selected.
+func (m Model) dispatchComposeAction(msg tea.KeyMsg, project, workDir string, cmds []tea.Cmd) (Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, Keys.Compose.Up):
+		m.statusMessage = fmt.Sprintf("docker compose up -d  [%s]", project)
+		m.showSpinner = true
+		cmds = append(cmds, composeUpCmd(project, workDir), m.spinner.Tick)
+	case key.Matches(msg, Keys.Compose.UpBuild):
+		m.statusMessage = fmt.Sprintf("docker compose up -d --build  [%s]", project)
+		m.showSpinner = true
+		cmds = append(cmds, composeUpBuildCmd(project, workDir), m.spinner.Tick)
+	case key.Matches(msg, Keys.Compose.Recreate):
+		m.modal = NewConfirmModal(
+			"Force Recreate",
+			fmt.Sprintf("docker compose up -d --force-recreate\nProject: %s", project),
+			tea.Batch(composeRecreateCmd(project, workDir), m.spinner.Tick),
+		)
+	case key.Matches(msg, Keys.Compose.Down):
+		m.modal = NewConfirmModal(
+			"Compose Down",
+			fmt.Sprintf("docker compose down\nProject: %s", project),
+			tea.Batch(composeDownCmd(project, workDir), m.spinner.Tick),
+		)
+	case key.Matches(msg, Keys.Compose.Pull):
+		m.statusMessage = fmt.Sprintf("docker compose pull  [%s]", project)
+		m.showSpinner = true
+		cmds = append(cmds, composePullCmd(project, workDir), m.spinner.Tick)
+	case key.Matches(msg, Keys.Compose.Build):
+		m.statusMessage = fmt.Sprintf("docker compose build  [%s]", project)
+		m.showSpinner = true
+		cmds = append(cmds, composeBuildCmd(project, workDir), m.spinner.Tick)
 	}
 	return m, tea.Batch(cmds...)
 }

@@ -24,7 +24,7 @@ type ColSpec struct {
 // containerCols defines the canonical column specs for the containers table.
 var containerCols = []ColSpec{
 	{Header: "Name",   MinWidth: 20, Align: AlignLeft},
-	{Header: "Status", Fixed: 12,   Align: AlignLeft},
+	{Header: "Status", Fixed: 14,   Align: AlignLeft},
 	{Header: "Image",  MinWidth: 30, Align: AlignLeft},
 	{Header: "Ports",  Fixed: 18,   Align: AlignLeft},
 	{Header: "CPU%",   Fixed: 6,    Align: AlignRight},
@@ -76,6 +76,16 @@ func renderCell(value string, width int, align AlignType) string {
 		style = style.AlignHorizontal(lipgloss.Right)
 	}
 	return style.Render(value)
+}
+
+// RenderRow applies renderCell to each value using the matching ColSpec and width.
+// Single source of truth for all table rows: container rows, group rows.
+func RenderRow(cols []ColSpec, widths []int, values []string) table.Row {
+	row := make(table.Row, len(cols))
+	for i, v := range values {
+		row[i] = renderCell(v, widths[i], cols[i].Align)
+	}
+	return row
 }
 
 // buildTableColumns builds Bubble Tea table columns whose header titles are
