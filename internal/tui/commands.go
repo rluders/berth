@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rluders/berth/internal/controller"
-	"github.com/rluders/berth/internal/engine"
 )
 
 // ── Fetch commands ────────────────────────────────────────────────────────────
@@ -295,68 +293,61 @@ func totalCleanupCmd() tea.Cmd {
 
 // ── Compose commands ──────────────────────────────────────────────────────────
 
-func composeUpCmd(project, workDir string) tea.Cmd {
+// composeStreamCmd starts a compose operation and returns the first streamed line as a message.
+// Subsequent lines are self-scheduled via readNextComposeLineCmd.
+func composeStreamCmd(ctx context.Context, project, workDir string, fn func(context.Context, string, string, chan<- string) error) tea.Cmd {
 	return func() tea.Msg {
-		if err := controller.ComposeUp(project, workDir); err != nil {
-			return errMsg{err}
+		ch := make(chan string, 64)
+		if err := fn(ctx, project, workDir, ch); err != nil {
+			return composeDoneMsg{project: project, err: err}
 		}
-		return statusMsg(fmt.Sprintf("[%s] compose up done.", project))
+		line, ok := <-ch
+		if !ok {
+			return composeDoneMsg{project: project}
+		}
+		return composeOutputMsg{project: project, line: line, ch: ch}
 	}
 }
 
-func composeUpBuildCmd(project, workDir string) tea.Cmd {
+// readNextComposeLineCmd reads the next line from an in-progress compose stream.
+func readNextComposeLineCmd(ch <-chan string, project string) tea.Cmd {
 	return func() tea.Msg {
-		if err := controller.ComposeUpBuild(project, workDir); err != nil {
-			return errMsg{err}
+		line, ok := <-ch
+		if !ok {
+			return composeDoneMsg{project: project}
 		}
-		return statusMsg(fmt.Sprintf("[%s] compose up --build done.", project))
+		return composeOutputMsg{project: project, line: line, ch: ch}
 	}
 }
 
-func composeRecreateCmd(project, workDir string) tea.Cmd {
-	return func() tea.Msg {
-		if err := controller.ComposeRecreate(project, workDir); err != nil {
-			return errMsg{err}
-		}
-		return statusMsg(fmt.Sprintf("[%s] compose recreate done.", project))
-	}
+func composeUpCmd(ctx context.Context, project, workDir string) tea.Cmd {
+	return composeStreamCmd(ctx, project, workDir, controller.ComposeUp)
 }
 
-func composeDownCmd(project, workDir string) tea.Cmd {
-	return func() tea.Msg {
-		if err := controller.ComposeDown(project, workDir); err != nil {
-			return errMsg{err}
-		}
-		return statusMsg(fmt.Sprintf("[%s] compose down done.", project))
-	}
+func composeUpBuildCmd(ctx context.Context, project, workDir string) tea.Cmd {
+	return composeStreamCmd(ctx, project, workDir, controller.ComposeUpBuild)
 }
 
-func composePullCmd(project, workDir string) tea.Cmd {
-	return func() tea.Msg {
-		if err := controller.ComposePull(project, workDir); err != nil {
-			return errMsg{err}
-		}
-		return statusMsg(fmt.Sprintf("[%s] compose pull done.", project))
-	}
+func composeRecreateCmd(ctx context.Context, project, workDir string) tea.Cmd {
+	return composeStreamCmd(ctx, project, workDir, controller.ComposeRecreate)
 }
 
-func composeBuildCmd(project, workDir string) tea.Cmd {
-	return func() tea.Msg {
-		if err := controller.ComposeBuild(project, workDir); err != nil {
-			return errMsg{err}
-		}
-		return statusMsg(fmt.Sprintf("[%s] compose build done.", project))
-	}
+func composeDownCmd(ctx context.Context, project, workDir string) tea.Cmd {
+	return composeStreamCmd(ctx, project, workDir, controller.ComposeDown)
+}
+
+func composePullCmd(ctx context.Context, project, workDir string) tea.Cmd {
+	return composeStreamCmd(ctx, project, workDir, controller.ComposePull)
+}
+
+func composeBuildCmd(ctx context.Context, project, workDir string) tea.Cmd {
+	return composeStreamCmd(ctx, project, workDir, controller.ComposeBuild)
 }
 
 // ── Exec shell ────────────────────────────────────────────────────────────────
 
 func execShellCmd(containerID string) tea.Cmd {
-	enginePath := engine.GetEnginePath()
-	if enginePath == "" {
-		enginePath = "docker"
-	}
-	cmd := exec.Command(enginePath, "exec", "-it", containerID, "/bin/sh")
+	cmd := controller.ExecShell(containerID)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

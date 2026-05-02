@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os/exec"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
@@ -344,6 +345,15 @@ func formatCreated(s string) string {
 	default:
 		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
 	}
+}
+
+// ExecShell returns an exec.Cmd that opens an interactive shell in the container.
+func ExecShell(containerID string) *exec.Cmd {
+	enginePath := engine.GetEnginePath()
+	if enginePath == "" {
+		enginePath = "docker"
+	}
+	return exec.Command(enginePath, "exec", "-it", containerID, "/bin/sh")
 }
 
 // formatPorts converts Docker port list to a compact string.

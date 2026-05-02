@@ -102,6 +102,10 @@ type Model struct {
 
 	// Last action key pressed in ContainersView (drives command preview).
 	lastActionKey string
+
+	// Compose streaming state
+	composeOutput []string           // rolling 200-line buffer of streamed compose output
+	composeCancel context.CancelFunc // cancels the running compose operation, nil when idle
 }
 
 // InitialModel returns an initialized Model with default values.

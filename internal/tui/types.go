@@ -45,6 +45,18 @@ type (
 	refreshTickMsg    struct{}
 	statusMsg         string
 	errMsg            struct{ err error }
+
+	// composeOutputMsg carries one streamed line from an ongoing compose operation.
+	composeOutputMsg struct {
+		project string
+		line    string
+		ch      <-chan string
+	}
+	// composeDoneMsg signals a compose operation completed (with or without error).
+	composeDoneMsg struct {
+		project string
+		err     error
+	}
 )
 
 func (e errMsg) Error() string { return e.err.Error() }

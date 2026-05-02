@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -253,37 +254,57 @@ func (m Model) composeWorkDir(project string) string {
 	return ""
 }
 
+// startComposeOp cancels any running compose op, creates a fresh context, and returns the cmd.
+func (m *Model) startComposeOp(project, workDir string, fn func(context.Context, string, string) tea.Cmd) tea.Cmd {
+	if m.composeCancel != nil {
+		m.composeCancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	m.composeCancel = cancel
+	m.showSpinner = true
+	m.composeOutput = nil
+	return fn(ctx, project, workDir)
+}
+
 // dispatchComposeAction handles compose project-level action keys when a group row is selected.
 func (m Model) dispatchComposeAction(msg tea.KeyMsg, project, workDir string, cmds []tea.Cmd) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, Keys.Compose.Up):
 		m.statusMessage = fmt.Sprintf("docker compose up -d  [%s]", project)
-		m.showSpinner = true
-		cmds = append(cmds, composeUpCmd(project, workDir), m.spinner.Tick)
+		cmds = append(cmds, m.startComposeOp(project, workDir, composeUpCmd), m.spinner.Tick)
 	case key.Matches(msg, Keys.Compose.UpBuild):
 		m.statusMessage = fmt.Sprintf("docker compose up -d --build  [%s]", project)
-		m.showSpinner = true
-		cmds = append(cmds, composeUpBuildCmd(project, workDir), m.spinner.Tick)
+		cmds = append(cmds, m.startComposeOp(project, workDir, composeUpBuildCmd), m.spinner.Tick)
 	case key.Matches(msg, Keys.Compose.Recreate):
+		ctx, cancel := context.WithCancel(context.Background())
+		if m.composeCancel != nil {
+			m.composeCancel()
+		}
+		m.composeCancel = cancel
+		m.composeOutput = nil
 		m.modal = NewConfirmModal(
 			"Force Recreate",
 			fmt.Sprintf("docker compose up -d --force-recreate\nProject: %s", project),
-			tea.Batch(composeRecreateCmd(project, workDir), m.spinner.Tick),
+			tea.Batch(composeRecreateCmd(ctx, project, workDir), m.spinner.Tick),
 		)
 	case key.Matches(msg, Keys.Compose.Down):
+		ctx, cancel := context.WithCancel(context.Background())
+		if m.composeCancel != nil {
+			m.composeCancel()
+		}
+		m.composeCancel = cancel
+		m.composeOutput = nil
 		m.modal = NewConfirmModal(
 			"Compose Down",
 			fmt.Sprintf("docker compose down\nProject: %s", project),
-			tea.Batch(composeDownCmd(project, workDir), m.spinner.Tick),
+			tea.Batch(composeDownCmd(ctx, project, workDir), m.spinner.Tick),
 		)
 	case key.Matches(msg, Keys.Compose.Pull):
 		m.statusMessage = fmt.Sprintf("docker compose pull  [%s]", project)
-		m.showSpinner = true
-		cmds = append(cmds, composePullCmd(project, workDir), m.spinner.Tick)
+		cmds = append(cmds, m.startComposeOp(project, workDir, composePullCmd), m.spinner.Tick)
 	case key.Matches(msg, Keys.Compose.Build):
 		m.statusMessage = fmt.Sprintf("docker compose build  [%s]", project)
-		m.showSpinner = true
-		cmds = append(cmds, composeBuildCmd(project, workDir), m.spinner.Tick)
+		cmds = append(cmds, m.startComposeOp(project, workDir, composeBuildCmd), m.spinner.Tick)
 	}
 	return m, tea.Batch(cmds...)
 }
