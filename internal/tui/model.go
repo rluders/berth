@@ -40,12 +40,9 @@ type Model struct {
 	// Container stats
 	containerStats map[string]controller.ContainerStat
 
-	// Compose group toggle
-	groupByCompose bool
-
-	// Accordion state (only active when groupByCompose == true)
-	collapsedGroups      map[string]bool
-	containerVisibleRows []containerRowMeta
+	// Accordion state
+	collapsedGroups map[string]bool
+	rows            []Row
 
 	// System info
 	systemInfo controller.SystemInfo
@@ -232,9 +229,6 @@ func (m Model) headerText() string {
 		}
 		extra = fmt.Sprintf(" [%s]", mode)
 	}
-	if m.groupByCompose && m.currentView == ContainersView {
-		extra = " [grouped]"
-	}
 	return fmt.Sprintf("Berth  %s  %s Engine%s", view, eng, extra)
 }
 
@@ -276,12 +270,9 @@ func (m Model) contentHeight() int {
 	return h
 }
 
-// buildContainerRows produces filtered, optionally compose-grouped table rows
-// and a parallel metadata slice. Both slices always have the same length.
-func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
+// recomputeRows applies filter, rebuilds m.rows via BuildRows, and syncs the table.
+func (m *Model) recomputeRows() {
 	filter := strings.ToLower(m.filterInput.Value())
-
-	// Apply filter to raw containers.
 	var filtered []controller.Container
 	for _, c := range m.containers {
 		if filter != "" {
@@ -292,96 +283,60 @@ func (m Model) buildContainerRows() ([]table.Row, []containerRowMeta) {
 		}
 		filtered = append(filtered, c)
 	}
+	m.rows = BuildRows(filtered, m.collapsedGroups)
+	m.containerTable.SetRows(m.buildTableRowsFromRows())
+}
 
-	var rows []table.Row
-	var metas []containerRowMeta
+// buildTableRowsFromRows renders m.rows into table.Row values for the bubble-tea table.
+func (m Model) buildTableRowsFromRows() []table.Row {
+	var tableRows []table.Row
+	for _, row := range m.rows {
+		switch row.Type {
+		case RowTypeGroup:
+			running, total := groupAggStatus(row.Containers)
+			label := GroupStatusColor(running, total)
+			prefix := "▼ "
+			if row.Collapsed {
+				prefix = "▶ "
+			}
+			values := []string{currentTheme.GroupHeaderStyle.Render(prefix + row.GroupID), label, "", "", "", "", ""}
+			tableRows = append(tableRows, RenderRow(containerCols, m.containerColWidths, values))
 
-	containerRow := func(c controller.Container, namePrefix string, inGroup bool) table.Row {
-		cpuStr := "-"
-		memStr := "-"
-		if c.State == "running" {
-			stat, ok := m.containerStats[c.ID]
-			if !ok {
-				cpuStr = "..."
-				memStr = "..."
-			} else {
-				cpuStr = fmt.Sprintf("%.1f", stat.CPUPercent)
-				if stat.MemLimit > 0 {
-					memStr = utils.FormatBytes(stat.MemUsage)
-				} else {
+		case RowTypeContainer:
+			c := row.Container
+			cpuStr := "-"
+			memStr := "-"
+			if c.State == "running" {
+				stat, ok := m.containerStats[c.ID]
+				if !ok {
+					cpuStr = "..."
 					memStr = "..."
+				} else {
+					cpuStr = fmt.Sprintf("%.1f", stat.CPUPercent)
+					if stat.MemLimit > 0 {
+						memStr = utils.FormatBytes(stat.MemUsage)
+					} else {
+						memStr = "..."
+					}
 				}
 			}
-		}
-		name := namePrefix + c.Names
-		if inGroup {
-			name = currentTheme.GroupChildStyle.Render(name)
-		}
-		values := []string{
-			name,
-			FormatStatus(c.State),
-			c.Image,
-			c.Ports,
-			cpuStr,
-			memStr,
-			utils.FormatAge(c.CreatedAt),
-		}
-		return RenderRow(containerCols, m.containerColWidths, values)
-	}
-
-	if !m.groupByCompose {
-		for _, c := range filtered {
-			rows = append(rows, containerRow(c, "", false))
-			metas = append(metas, containerRowMeta{
-				kind:          rowKindContainer,
-				containerID:   c.ID,
-				containerName: c.Names,
-			})
-		}
-		return rows, metas
-	}
-
-	// Grouped mode: split into compose groups and standalone.
-	groups, standalone := buildComposeGroups(filtered)
-
-	for _, g := range groups {
-		running, total := groupAggStatus(g.containers)
-		label := GroupStatusColor(running, total)
-		collapsed := m.collapsedGroups[g.project]
-
-		prefix := "▼ "
-		if collapsed {
-			prefix = "▶ "
-		}
-
-		groupValues := []string{currentTheme.GroupHeaderStyle.Render(prefix + g.project), label, "", "", "", "", ""}
-		rows = append(rows, RenderRow(containerCols, m.containerColWidths, groupValues))
-		metas = append(metas, containerRowMeta{kind: rowKindGroup, groupName: g.project})
-
-		if !collapsed {
-			for _, c := range g.containers {
-				rows = append(rows, containerRow(c, "  › ", true))
-				metas = append(metas, containerRowMeta{
-					kind:          rowKindContainer,
-					groupName:     g.project,
-					containerID:   c.ID,
-					containerName: c.Names,
-				})
+			name := c.Names
+			if row.GroupID != "" {
+				name = currentTheme.GroupChildStyle.Render("  › " + c.Names)
 			}
+			values := []string{
+				name,
+				FormatStatus(c.State),
+				c.Image,
+				c.Ports,
+				cpuStr,
+				memStr,
+				utils.FormatAge(c.CreatedAt),
+			}
+			tableRows = append(tableRows, RenderRow(containerCols, m.containerColWidths, values))
 		}
 	}
-
-	// Standalone containers (no compose label) appended without a group header.
-	for _, c := range standalone {
-		rows = append(rows, containerRow(c, "", false))
-		metas = append(metas, containerRowMeta{
-			kind:          rowKindContainer,
-			containerID:   c.ID,
-			containerName: c.Names,
-		})
-	}
-
-	return rows, metas
+	return tableRows
 }
 
 // buildImageRows produces filtered image rows.

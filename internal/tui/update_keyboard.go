@@ -108,9 +108,7 @@ func (m Model) handleFilterKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 func (m *Model) rebuildFilteredTables() {
 	switch m.currentView {
 	case ContainersView:
-		rows, metas := m.buildContainerRows()
-		m.containerTable.SetRows(rows)
-		m.containerVisibleRows = metas
+		m.recomputeRows()
 	case ImagesView:
 		m.imageTable.SetRows(m.buildImageRows())
 	case VolumesView:
@@ -132,16 +130,9 @@ func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.lastActionKey = ""
 	}
 
-	switch {
-	case key.Matches(msg, Keys.Container.Filter):
+	if key.Matches(msg, Keys.Container.Filter) {
 		m.filterActive = true
 		m.filterInput.Focus()
-		return m, tea.Batch(cmds...)
-	case key.Matches(msg, Keys.Container.Group):
-		m.groupByCompose = !m.groupByCompose
-		rows, metas := m.buildContainerRows()
-		m.containerTable.SetRows(rows)
-		m.containerVisibleRows = metas
 		return m, tea.Batch(cmds...)
 	}
 
@@ -149,70 +140,52 @@ func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 	}
 
-	// In grouped mode dispatch via metadata to avoid parsing styled strings.
-	if m.groupByCompose {
-		idx := m.containerTable.Cursor()
-		if idx < 0 || idx >= len(m.containerVisibleRows) {
-			return m, tea.Batch(cmds...)
-		}
-		meta := m.containerVisibleRows[idx]
-
-		rebuildRows := func() {
-			rows, metas := m.buildContainerRows()
-			m.containerTable.SetRows(rows)
-			m.containerVisibleRows = metas
-		}
-
-		switch meta.kind {
-		case rowKindGroup:
-			switch {
-			case key.Matches(msg, Keys.Container.Details):
-				m.collapsedGroups[meta.groupName] = !m.collapsedGroups[meta.groupName]
-				rebuildRows()
-			case key.Matches(msg, Keys.Container.Expand):
-				delete(m.collapsedGroups, meta.groupName)
-				rebuildRows()
-			case key.Matches(msg, Keys.Container.Collapse):
-				m.collapsedGroups[meta.groupName] = true
-				rebuildRows()
-			case key.Matches(msg, Keys.Container.Logs):
-				m.stopLogStream()
-				m.logLines = nil
-				m.logFollowing = true
-				m.currentLogGroupName = meta.groupName
-				m.currentLogContainerID = ""
-				group := findGroupContainers(m.containers, meta.groupName)
-				m.pushView(LogsView)
-				m.logReady = true
-				ch, cancel, waitCmd := startGroupLogStreamCmd(group)
-				m.logCh = ch
-				m.logCancel = cancel
-				cmds = append(cmds, waitCmd)
-			default:
-				workDir := m.composeWorkDir(meta.groupName)
-				return m.dispatchComposeAction(msg, meta.groupName, workDir, cmds)
-			}
-			return m, tea.Batch(cmds...)
-
-		case rowKindContainer:
-			if key.Matches(msg, Keys.Container.Collapse) && meta.groupName != "" {
-				m.collapsedGroups[meta.groupName] = true
-				rebuildRows()
-				return m, tea.Batch(cmds...)
-			}
-			return m.dispatchContainerAction(msg, meta.containerID, meta.containerName, cmds)
-		}
-
+	idx := m.containerTable.Cursor()
+	if idx < 0 || idx >= len(m.rows) {
 		return m, tea.Batch(cmds...)
 	}
+	row := m.rows[idx]
 
-	// Ungrouped mode: resolve via display name.
-	name := m.containerTable.SelectedRow()[0]
-	id := m.resolveContainerID(name)
-	if id == "" {
-		id = name
+	switch row.Type {
+	case RowTypeGroup:
+		switch {
+		case key.Matches(msg, Keys.Container.Details):
+			m.collapsedGroups[row.GroupID] = !m.collapsedGroups[row.GroupID]
+			m.recomputeRows()
+		case key.Matches(msg, Keys.Container.Expand):
+			delete(m.collapsedGroups, row.GroupID)
+			m.recomputeRows()
+		case key.Matches(msg, Keys.Container.Collapse):
+			m.collapsedGroups[row.GroupID] = true
+			m.recomputeRows()
+		case key.Matches(msg, Keys.Container.Logs):
+			m.stopLogStream()
+			m.logLines = nil
+			m.logFollowing = true
+			m.currentLogGroupName = row.GroupID
+			m.currentLogContainerID = ""
+			group := findGroupContainers(m.containers, row.GroupID)
+			m.pushView(LogsView)
+			m.logReady = true
+			ch, cancel, waitCmd := startGroupLogStreamCmd(group)
+			m.logCh = ch
+			m.logCancel = cancel
+			cmds = append(cmds, waitCmd)
+		default:
+			workDir := m.composeWorkDir(row.GroupID)
+			return m.dispatchComposeAction(msg, row.GroupID, workDir, cmds)
+		}
+
+	case RowTypeContainer:
+		if key.Matches(msg, Keys.Container.Collapse) && row.GroupID != "" {
+			m.collapsedGroups[row.GroupID] = true
+			m.recomputeRows()
+			return m, tea.Batch(cmds...)
+		}
+		return m.dispatchContainerAction(msg, row.Container.ID, row.Container.Names, cmds)
 	}
-	return m.dispatchContainerAction(msg, id, name, cmds)
+
+	return m, tea.Batch(cmds...)
 }
 
 // dispatchContainerAction handles action keys (Details, Start, Stop, etc.) for a resolved container.

@@ -69,9 +69,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case containerListMsg:
 		slog.Debug("containerListMsg", "count", len(msg))
 		m.containers = []controller.Container(msg)
-		rows, metas := m.buildContainerRows()
-		m.containerTable.SetRows(rows)
-		m.containerVisibleRows = metas
+		m.recomputeRows()
 		m.showSpinner = false
 		m.statusMessage = ""
 
@@ -121,9 +119,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				delete(m.containerStats, id)
 			}
 		}
-		rows, metas := m.buildContainerRows()
-		m.containerTable.SetRows(rows)
-		m.containerVisibleRows = metas
+		m.recomputeRows()
 
 	case statsTickMsg:
 		var ids []string

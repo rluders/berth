@@ -1,8 +1,10 @@
 package tui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // AlignType controls horizontal text alignment within a column.
@@ -68,35 +70,56 @@ func computeWidths(tableWidth int, cols []ColSpec) []int {
 	return widths
 }
 
-// renderCell formats value into exactly width printable characters with the
-// requested alignment. ANSI escape codes in value are handled transparently.
-func renderCell(value string, width int, align AlignType) string {
-	style := lipgloss.NewStyle().Width(width).MaxWidth(width)
-	if align == AlignRight {
-		style = style.AlignHorizontal(lipgloss.Right)
-	}
-	return style.Render(value)
-}
-
-// RenderRow applies renderCell to each value using the matching ColSpec and width.
-// Single source of truth for all table rows: container rows, group rows.
+// RenderRow builds a table row with ANSI-safe truncation and alignment.
+//
+// The bubbles table internally applies runewidth.Truncate to each cell value.
+// runewidth counts ANSI escape sequences as visible characters, so pre-rendering
+// with lipgloss Width inflates the runewidth beyond the column width and causes
+// the table to truncate — destroying the ANSI prefix and making styled text invisible.
+//
+// Fix: pass values without lipgloss pre-padding. The table's own lipgloss.Width
+// (which is charmbracelet/x/ansi-aware) handles padding correctly after truncation.
+// We only apply ANSI-safe ansi.Truncate here to cap content before the table sees it.
+// Right-aligned columns get plain-text padding (no ANSI) so runewidth stays accurate.
 func RenderRow(cols []ColSpec, widths []int, values []string) table.Row {
 	row := make(table.Row, len(cols))
 	for i, v := range values {
-		row[i] = renderCell(v, widths[i], cols[i].Align)
+		w := widths[i]
+		v = ansi.Truncate(v, w, "…")
+		if cols[i].Align == AlignRight {
+			vw := ansi.StringWidth(v)
+			if vw < w {
+				v = strings.Repeat(" ", w-vw) + v
+			}
+		}
+		row[i] = v
 	}
 	return row
 }
 
-// buildTableColumns builds Bubble Tea table columns whose header titles are
-// pre-rendered to the same fixed width used for row cells.
+// buildTableColumns builds Bubble Tea table columns with plain-padded headers.
+// Headers are ASCII so plain string padding avoids ANSI inflation in runewidth.
 func buildTableColumns(widths []int, cols []ColSpec) []table.Column {
 	result := make([]table.Column, len(cols))
 	for i, col := range cols {
 		result[i] = table.Column{
-			Title: renderCell(col.Header, widths[i], col.Align),
+			Title: padHeader(col.Header, widths[i], col.Align),
 			Width: widths[i],
 		}
 	}
 	return result
+}
+
+// padHeader returns a plain-text header string padded to exactly width chars.
+// Headers are always ASCII so len() == visible width.
+func padHeader(value string, width int, align AlignType) string {
+	vw := len(value)
+	if vw >= width {
+		return value[:width]
+	}
+	pad := strings.Repeat(" ", width-vw)
+	if align == AlignRight {
+		return pad + value
+	}
+	return value + pad
 }

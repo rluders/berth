@@ -4,25 +4,64 @@ import (
 	"github.com/rluders/berth/internal/controller"
 )
 
-type rowKind int
+type RowType int
 
 const (
-	rowKindGroup     rowKind = iota // compose project header row
-	rowKindContainer                // individual container row
+	RowTypeGroup     RowType = iota // compose project header row
+	RowTypeContainer                // individual container row
 )
 
-// containerRowMeta is a parallel entry for every visible table row.
-// It carries enough context to dispatch keyboard actions without re-parsing display strings.
-type containerRowMeta struct {
-	kind          rowKind
-	groupName     string // group rows: project name; container rows: parent project (empty if standalone)
-	containerID   string // container rows only
-	containerName string // container rows only
+// Row is the canonical unit of the visible containers list.
+type Row struct {
+	Type       RowType
+	GroupID    string               // project name; empty for standalone containers
+	Name       string
+	Collapsed  bool                 // group rows: current collapse state
+	Containers []controller.Container // group rows: member containers
+	Container  *controller.Container  // container rows: the container
 }
 
 type composeGroup struct {
 	project    string
 	containers []controller.Container
+}
+
+// BuildRows computes the flat visible row list from containers and collapse state.
+func BuildRows(containers []controller.Container, collapsed map[string]bool) []Row {
+	groups, standalone := buildComposeGroups(containers)
+
+	var rows []Row
+	for _, g := range groups {
+		isCollapsed := collapsed[g.project]
+		rows = append(rows, Row{
+			Type:       RowTypeGroup,
+			GroupID:    g.project,
+			Name:       g.project,
+			Collapsed:  isCollapsed,
+			Containers: g.containers,
+		})
+		if !isCollapsed {
+			for _, c := range g.containers {
+				c := c
+				rows = append(rows, Row{
+					Type:      RowTypeContainer,
+					GroupID:   g.project,
+					Name:      c.Names,
+					Container: &c,
+				})
+			}
+		}
+	}
+	for _, c := range standalone {
+		c := c
+		rows = append(rows, Row{
+			Type:      RowTypeContainer,
+			GroupID:   "",
+			Name:      c.Names,
+			Container: &c,
+		})
+	}
+	return rows
 }
 
 // buildComposeGroups partitions containers into ordered compose groups and a

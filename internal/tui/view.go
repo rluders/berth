@@ -283,17 +283,17 @@ func (m Model) BuildCommandPreview() string {
 	if m.currentView != ContainersView {
 		return ""
 	}
-	if len(m.containerVisibleRows) == 0 {
+	if len(m.rows) == 0 {
 		return " "
 	}
 	idx := m.containerTable.Cursor()
-	if idx >= len(m.containerVisibleRows) {
+	if idx < 0 || idx >= len(m.rows) {
 		return " "
 	}
-	meta := m.containerVisibleRows[idx]
+	row := m.rows[idx]
 
-	if meta.kind == rowKindGroup {
-		project := meta.groupName
+	if row.Type == RowTypeGroup {
+		project := row.GroupID
 		switch m.lastActionKey {
 		case "U":
 			return fmt.Sprintf("docker compose -p %s up -d --build", project)
@@ -310,7 +310,7 @@ func (m Model) BuildCommandPreview() string {
 		}
 	}
 
-	name := meta.containerName
+	name := row.Container.Names
 	switch m.lastActionKey {
 	case "s":
 		return fmt.Sprintf("docker start %s", name)
@@ -379,22 +379,20 @@ func (m Model) renderKeyHints() string {
 	var viewHints []hint
 	switch m.currentView {
 	case ContainersView:
-		if m.groupByCompose {
-			idx := m.containerTable.Cursor()
-			if idx >= 0 && idx < len(m.containerVisibleRows) && m.containerVisibleRows[idx].kind == rowKindGroup {
-				viewHints = []hint{
-					{"↑/↓", "move"}, {"→/←", "expand/collapse"},
-					{"u", "up"}, {"U", "up+build"}, {"R", "recreate"},
-					{"d", "down"}, {"p", "pull"}, {"b", "build"},
-					{"/", "filter"}, {"g", "ungroup"},
-				}
-				break
+		idx := m.containerTable.Cursor()
+		if idx >= 0 && idx < len(m.rows) && m.rows[idx].Type == RowTypeGroup {
+			viewHints = []hint{
+				{"↑/↓", "move"}, {"→/←", "expand/collapse"},
+				{"u", "up"}, {"U", "up+build"}, {"R", "recreate"},
+				{"d", "down"}, {"p", "pull"}, {"b", "build"},
+				{"/", "filter"},
 			}
+			break
 		}
 		viewHints = []hint{
 			{"↑/↓", "move"}, {"enter", "details"}, {"l", "logs"},
 			{"i", "inspect"}, {"s", "start"}, {"x", "stop"},
-			{"r", "restart"}, {"d", "delete"}, {"e", "exec"}, {"/", "filter"}, {"g", "group"},
+			{"r", "restart"}, {"d", "delete"}, {"e", "exec"}, {"/", "filter"},
 		}
 	case ImagesView:
 		viewHints = []hint{{"d", "remove"}, {"P", "prune"}, {"/", "filter"}}
