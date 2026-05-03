@@ -2,10 +2,12 @@ package tui
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/rluders/berth/internal/controller"
 	"github.com/stretchr/testify/assert"
 )
@@ -126,6 +128,26 @@ func TestHandleWindowSizeMsg_setsListTableWidths(t *testing.T) {
 	assert.Equal(t, 120, result.imageTable.Width())
 	assert.Equal(t, 120, result.volumeTable.Width())
 	assert.Equal(t, 120, result.networkTable.Width())
+}
+
+func TestHandleWindowSizeMsg_setsBubblesTableHeaderWidths(t *testing.T) {
+	m := InitialModel()
+
+	result, _ := updateModel(t, m, tea.WindowSizeMsg{Width: 120, Height: 40})
+
+	for name, view := range map[string]string{
+		"images":   result.imageTable.View(),
+		"volumes":  result.volumeTable.View(),
+		"networks": result.networkTable.View(),
+	} {
+		t.Run(name, func(t *testing.T) {
+			lines := strings.Split(view, "\n")
+
+			assert.GreaterOrEqual(t, len(lines), 2)
+			assert.Equal(t, 120, lipgloss.Width(lines[0]))
+			assert.Equal(t, 120, lipgloss.Width(lines[1]))
+		})
+	}
 }
 
 func TestHandleWindowSizeMsg_growsFlexibleColumns(t *testing.T) {

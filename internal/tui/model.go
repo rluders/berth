@@ -136,9 +136,7 @@ func InitialModel() Model {
 		table.WithHeight(0),
 	)
 
-	s := table.DefaultStyles()
-	s.Header = currentTheme.TableHeaderStyle
-	s.Selected = currentTheme.TableSelectedStyle
+	s := tableStyles()
 	imageTable.SetStyles(s)
 	volumeTable.SetStyles(s)
 	networkTable.SetStyles(s)
@@ -176,6 +174,13 @@ func InitialModel() Model {
 func (m Model) Init() tea.Cmd {
 	slog.Debug("Init called")
 	return tea.Batch(fetchAllCmd(), m.spinner.Tick, statsTickCmd(), refreshTickCmd())
+}
+
+func tableStyles() table.Styles {
+	s := table.DefaultStyles()
+	s.Header = currentTheme.TableHeaderStyle.Padding(0, 1)
+	s.Selected = currentTheme.TableSelectedStyle
+	return s
 }
 
 func (m Model) getViewName() string {
@@ -282,7 +287,7 @@ func (m Model) renderContainerHeader() string {
 	for i, col := range m.builtCols {
 		cells[i] = renderCell(padHeader(col.Header, col.Width, col.Align), col.Width, col.Align)
 	}
-	return currentTheme.TableHeaderStyle.Render(strings.Join(cells, " "))
+	return currentTheme.TableHeaderStyle.Width(m.width).Render(strings.Join(cells, " "))
 }
 
 // renderContainerViewRow renders one row as a full-width string with optional selection highlight.
