@@ -348,16 +348,6 @@ func (m Model) dispatchComposeAction(msg tea.KeyMsg, project, workDir string, cm
 	return m, tea.Batch(cmds...)
 }
 
-// resolveContainerID finds a container's full ID by display name.
-func (m Model) resolveContainerID(name string) string {
-	for _, c := range m.containers {
-		if c.Names == name {
-			return c.ID
-		}
-	}
-	return ""
-}
-
 func (m Model) handleImagesKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd

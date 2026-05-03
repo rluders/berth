@@ -260,16 +260,16 @@ func (m Model) renderSystem() string {
 		th.SectionStyle.Render("▸ Cleanup Actions") + "\n\n" +
 			"  " + bBtn + "\n" +
 			"  " + lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorMuted)).
-				Render("  Prune stopped containers, unused networks, dangling images") + "\n\n" +
+			Foreground(lipgloss.Color(colorMuted)).
+			Render("  Prune stopped containers, unused networks, dangling images") + "\n\n" +
 			"  " + aBtn + "\n" +
 			"  " + lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorMuted)).
-				Render("  + unused volumes") + "\n\n" +
+			Foreground(lipgloss.Color(colorMuted)).
+			Render("  + unused volumes") + "\n\n" +
 			"  " + tBtn + "\n" +
 			"  " + lipgloss.NewStyle().
-				Foreground(lipgloss.Color(colorMuted)).
-				Render("  Remove ALL unused resources"),
+			Foreground(lipgloss.Color(colorMuted)).
+			Render("  Remove ALL unused resources"),
 	)
 
 	return lipgloss.JoinVertical(
@@ -348,10 +348,6 @@ func (m Model) renderFooter() string {
 	// Progress bar
 	if m.progressVisible {
 		parts = append(parts, th.StatusMessageStyle.Render(m.progressLabel))
-		barW := m.width - 4
-		if barW < 10 {
-			barW = 10
-		}
 		parts = append(parts, "  "+m.progressBar.ViewAs(m.progressBar.Percent()))
 	}
 

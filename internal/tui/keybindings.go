@@ -4,13 +4,13 @@ import "github.com/charmbracelet/bubbles/key"
 
 // GlobalKeys holds key bindings available in all views.
 type GlobalKeys struct {
-	Quit key.Binding
-	Help key.Binding
-	Back key.Binding
-	Tab1 key.Binding
-	Tab2 key.Binding
-	Tab3 key.Binding
-	Tab4 key.Binding
+	Quit    key.Binding
+	Help    key.Binding
+	Back    key.Binding
+	Tab1    key.Binding
+	Tab2    key.Binding
+	Tab3    key.Binding
+	Tab4    key.Binding
 	Tab5    key.Binding
 	TabNext key.Binding
 	TabPrev key.Binding
@@ -18,8 +18,8 @@ type GlobalKeys struct {
 
 // ContainerKeys holds key bindings for the containers view.
 type ContainerKeys struct {
-	Details key.Binding
-	Start   key.Binding
+	Details  key.Binding
+	Start    key.Binding
 	Stop     key.Binding
 	Restart  key.Binding
 	Delete   key.Binding

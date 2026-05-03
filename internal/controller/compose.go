@@ -26,8 +26,9 @@ func StreamCompose(ctx context.Context, project, workDir string, ch chan<- strin
 	}
 
 	go func() {
-		defer pw.Close()
-		cmd.Wait() //nolint:errcheck
+		if err := pw.CloseWithError(cmd.Wait()); err != nil {
+			return
+		}
 	}()
 
 	go func() {

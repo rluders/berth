@@ -156,7 +156,7 @@ func RemoveContainer(idOrName string) error {
 }
 
 // GetContainerLogs retrieves the logs of a container (one-shot).
-func GetContainerLogs(idOrName string) (string, error) {
+func GetContainerLogs(idOrName string) (logs string, err error) {
 	out, err := containerService.ContainerLogs(context.Background(), idOrName, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -165,7 +165,11 @@ func GetContainerLogs(idOrName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get logs for container %s: %w", idOrName, err)
 	}
-	defer out.Close()
+	defer func() {
+		if closeErr := out.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close logs for container %s: %w", idOrName, closeErr)
+		}
+	}()
 
 	var buf strings.Builder
 	if _, err = stdcopy.StdCopy(&buf, &buf, out); err != nil {
@@ -192,16 +196,22 @@ func StreamContainerLogs(ctx context.Context, idOrName string, ch chan<- string)
 	if err != nil {
 		return
 	}
-	defer out.Close()
+	defer func() {
+		// StreamContainerLogs has no error return; close failure cannot be surfaced to callers.
+		_ = out.Close()
+	}()
 
 	pr, pw := io.Pipe()
 	go func() {
-		defer pw.Close()
+		var copyErr error
 		if _, err := stdcopy.StdCopy(pw, pw, out); err != nil {
 			// TTY container — fallback to raw copy
 			if _, err2 := io.Copy(pw, out); err2 != nil {
-				return
+				copyErr = err2
 			}
+		}
+		if err := pw.CloseWithError(copyErr); err != nil {
+			return
 		}
 	}()
 
@@ -292,12 +302,16 @@ func GetContainerDetails(idOrName string) (ContainerDetails, error) {
 }
 
 // GetContainerStats returns one-shot CPU/memory stats for a container.
-func GetContainerStats(idOrName string) (ContainerStat, error) {
+func GetContainerStats(idOrName string) (stat ContainerStat, err error) {
 	resp, err := containerService.ContainerStats(context.Background(), idOrName, false)
 	if err != nil {
 		return ContainerStat{}, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close stats response for container %s: %w", idOrName, closeErr)
+		}
+	}()
 
 	var s statsJSON
 	if err := json.NewDecoder(resp.Body).Decode(&s); err != nil {

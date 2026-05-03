@@ -180,48 +180,6 @@ func (m Model) handleModalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleModalMouseClick checks if a mouse left-click lands on a modal button.
-// buttonStartY is the terminal row where the button row starts.
-func (m Model) handleModalMouseClick(msg tea.MouseMsg, buttonStartY, modalLeftX int) (Model, tea.Cmd) {
-	modal := m.modal
-	if modal == nil {
-		return m, nil
-	}
-
-	// Only handle clicks on the button row.
-	if msg.Y != buttonStartY {
-		return m, nil
-	}
-
-	// Walk buttons to find which was clicked.
-	cursor := modalLeftX + currentTheme.ModalBoxStyle.GetHorizontalPadding()
-	for i, b := range modal.Buttons {
-		var s lipgloss.Style
-		switch b.Kind {
-		case ButtonKindDanger:
-			s = currentTheme.ButtonDangerStyle
-		case ButtonKindPrimary:
-			s = currentTheme.ButtonPrimaryStyle
-		default:
-			s = currentTheme.ButtonSecondaryStyle
-		}
-		btnW := lipgloss.Width(s.Render(b.Label))
-		if msg.X >= cursor && msg.X < cursor+btnW {
-			cmd := modal.ActivateAt(i)
-			m.modal = nil
-			if cmd == nil {
-				m.statusMessage = "Cancelled."
-				return m, nil
-			}
-			m.showSpinner = true
-			return m, cmd
-		}
-		cursor += btnW
-	}
-
-	return m, nil
-}
-
 // renderModal overlays the modal centered on a background string.
 func (m Model) renderModal(bg string) string {
 	if m.modal == nil {

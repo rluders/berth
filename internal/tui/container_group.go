@@ -14,9 +14,9 @@ const (
 // Row is the canonical unit of the visible containers list.
 type Row struct {
 	Type       RowType
-	GroupID    string               // project name; empty for standalone containers
+	GroupID    string // project name; empty for standalone containers
 	Name       string
-	Collapsed  bool                 // group rows: current collapse state
+	Collapsed  bool                   // group rows: current collapse state
 	Containers []controller.Container // group rows: member containers
 	Container  *controller.Container  // container rows: the container
 }

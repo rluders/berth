@@ -35,7 +35,6 @@ type (
 	volumeListMsg     []controller.Volume
 	networkListMsg    []controller.Network
 	systemInfoMsg     controller.SystemInfo
-	logsMsg           string
 	logChunkMsg       string
 	logStreamDoneMsg  struct{}
 	inspectMsg        string

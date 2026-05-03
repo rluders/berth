@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	dockerImageTypes "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/filters"
+	dockerImageTypes "github.com/docker/docker/api/types/image"
 	"github.com/rluders/berth/internal/engine"
 	"github.com/rluders/berth/internal/service"
 )

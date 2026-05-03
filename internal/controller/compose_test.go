@@ -86,4 +86,3 @@ func TestComposeUp_callsStreamCompose(t *testing.T) {
 	for range ch {
 	}
 }
-

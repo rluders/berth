@@ -173,14 +173,14 @@ func InitialModel() Model {
 		networkTable:    networkTable,
 		containerStats:  make(map[string]controller.ContainerStat),
 		collapsedGroups: make(map[string]bool),
-		systemInfo:     controller.SystemInfo{},
+		systemInfo:      controller.SystemInfo{},
 		inspectViewPort: viewport.New(0, 0),
 		logViewPort:     viewport.New(0, 0),
 		detailsViewPort: viewport.New(0, 0),
-		logFollowing: true,
-		filterInput:  fi,
-		spinner:      spinner.New(),
-		helpModel:    help.New(),
+		logFollowing:    true,
+		filterInput:     fi,
+		spinner:         spinner.New(),
+		helpModel:       help.New(),
 		progressBar: progress.New(
 			progress.WithDefaultGradient(),
 			progress.WithoutPercentage(),
@@ -218,7 +218,6 @@ func (m Model) getViewName() string {
 	}
 	return "Unknown"
 }
-
 
 func (m Model) headerText() string {
 	eng := strings.ToUpper(string(m.engineType))

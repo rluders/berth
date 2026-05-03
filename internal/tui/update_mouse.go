@@ -29,7 +29,7 @@ func (m Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 func (m Model) handleScrollUp() (Model, tea.Cmd) {
 	switch m.currentView {
 	case ContainersView:
-		m.containerVP.LineUp(3)
+		m.containerVP.ScrollUp(3)
 		return m, nil
 	case ImagesView:
 		var cmd tea.Cmd
@@ -44,12 +44,12 @@ func (m Model) handleScrollUp() (Model, tea.Cmd) {
 		m.networkTable, cmd = m.networkTable.Update(tea.KeyMsg{Type: tea.KeyUp})
 		return m, cmd
 	case InspectView:
-		m.inspectViewPort.LineUp(3)
+		m.inspectViewPort.ScrollUp(3)
 	case LogsView:
 		m.logFollowing = false
-		m.logViewPort.LineUp(3)
+		m.logViewPort.ScrollUp(3)
 	case DetailsView:
-		m.detailsViewPort.LineUp(3)
+		m.detailsViewPort.ScrollUp(3)
 	}
 	return m, nil
 }
@@ -57,7 +57,7 @@ func (m Model) handleScrollUp() (Model, tea.Cmd) {
 func (m Model) handleScrollDown() (Model, tea.Cmd) {
 	switch m.currentView {
 	case ContainersView:
-		m.containerVP.LineDown(3)
+		m.containerVP.ScrollDown(3)
 		return m, nil
 	case ImagesView:
 		var cmd tea.Cmd
@@ -72,11 +72,11 @@ func (m Model) handleScrollDown() (Model, tea.Cmd) {
 		m.networkTable, cmd = m.networkTable.Update(tea.KeyMsg{Type: tea.KeyDown})
 		return m, cmd
 	case InspectView:
-		m.inspectViewPort.LineDown(3)
+		m.inspectViewPort.ScrollDown(3)
 	case LogsView:
-		m.logViewPort.LineDown(3)
+		m.logViewPort.ScrollDown(3)
 	case DetailsView:
-		m.detailsViewPort.LineDown(3)
+		m.detailsViewPort.ScrollDown(3)
 	}
 	return m, nil
 }

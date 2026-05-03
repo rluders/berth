@@ -27,13 +27,13 @@ type Column struct {
 
 // containerCols defines the canonical column specs for the containers table.
 var containerCols = []Column{
-	{Header: "Name",   MinWidth: 20, Align: AlignLeft},
-	{Header: "Status", Fixed:    14, Align: AlignLeft},
-	{Header: "Image",  MinWidth: 20, Align: AlignLeft},
-	{Header: "Ports",  Fixed:    18, Align: AlignLeft},
-	{Header: "CPU%",   Fixed:     6, Align: AlignRight},
-	{Header: "Mem",    Fixed:    10, Align: AlignRight},
-	{Header: "Age",    Fixed:     6, Align: AlignRight},
+	{Header: "Name", MinWidth: 20, Align: AlignLeft},
+	{Header: "Status", Fixed: 14, Align: AlignLeft},
+	{Header: "Image", MinWidth: 20, Align: AlignLeft},
+	{Header: "Ports", Fixed: 18, Align: AlignLeft},
+	{Header: "CPU%", Fixed: 6, Align: AlignRight},
+	{Header: "Mem", Fixed: 10, Align: AlignRight},
+	{Header: "Age", Fixed: 6, Align: AlignRight},
 }
 
 // BuildColumns returns a copy of specs with Width computed for the given
