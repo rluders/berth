@@ -14,6 +14,8 @@
 
 **Berth** is a terminal-based UI to manage your containers, images, volumes, networks, and system usage — with support for **Docker** and **Podman**. Name origin: In maritime terms, a **berth** is a designated place where a ship is docked — just like containers in your stack. Clean, organized, and under control.
 
+![Berth demo](docs/assets/demo.gif)
+
 </div>
 
 ## 📖 Table of Contents
@@ -166,4 +168,4 @@ Made with [contrib.rocks](https://contrib.rocks).
 
 ## 📜 License
 
-This project is licensed under the [MIT License](LICENSE).
+[MIT License](LICENSE).
