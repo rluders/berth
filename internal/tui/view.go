@@ -156,7 +156,8 @@ func (m Model) renderTabBar() string {
 	// Fill remaining width with tab bar background.
 	barW := lipgloss.Width(bar)
 	if m.width > barW {
-		bar += th.TabBarStyle.Width(m.width - barW).Render("")
+		fill := th.TabBarStyle.Width(m.width - barW).Render("")
+		bar = lipgloss.JoinHorizontal(lipgloss.Top, bar, fill)
 	}
 	return bar
 }

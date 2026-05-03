@@ -19,9 +19,14 @@ func (m Model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	m.builtCols = BuildColumns(msg.Width-4, containerCols)
 
 	contentH := m.contentHeight()
-	// containerVP height is contentH-1 (header takes one line).
 	m.containerVP.Width = msg.Width
-	m.containerVP.Height = contentH - 1
+	// Table header renders 2 lines (text + BorderBottom). Always compute using
+	// ContainersView content height (which subtracts the command-preview footer line).
+	containerContentH := contentH
+	if m.currentView != ContainersView {
+		containerContentH-- // ContainersView subtracts extra line for command preview
+	}
+	m.containerVP.Height = containerContentH - 2 // -2: table header text + border bottom
 	m.imageTable.SetHeight(contentH)
 	m.volumeTable.SetHeight(contentH)
 	m.networkTable.SetHeight(contentH)
