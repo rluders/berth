@@ -6,13 +6,13 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/progress"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/table"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/rluders/berth/internal/controller"
 	"github.com/rluders/berth/internal/engine"
@@ -148,7 +148,7 @@ func InitialModel() Model {
 	return Model{
 		engineType:      engine.DetectEngine(),
 		currentView:     ContainersView,
-		containerVP:     viewport.New(0, 0),
+		containerVP:     viewport.New(),
 		builtCols:       initCols,
 		imageTable:      imageTable,
 		volumeTable:     volumeTable,
@@ -156,15 +156,15 @@ func InitialModel() Model {
 		containerStats:  make(map[string]controller.ContainerStat),
 		collapsedGroups: make(map[string]bool),
 		systemInfo:      controller.SystemInfo{},
-		inspectViewPort: viewport.New(0, 0),
-		logViewPort:     viewport.New(0, 0),
-		detailsViewPort: viewport.New(0, 0),
+		inspectViewPort: viewport.New(),
+		logViewPort:     viewport.New(),
+		detailsViewPort: viewport.New(),
 		logFollowing:    true,
 		filterInput:     fi,
 		spinner:         spinner.New(),
 		helpModel:       help.New(),
 		progressBar: progress.New(
-			progress.WithDefaultGradient(),
+			progress.WithDefaultBlend(),
 			progress.WithoutPercentage(),
 		),
 	}
@@ -352,10 +352,10 @@ func (m *Model) syncContainerViewport() {
 	}
 	m.containerVP.SetContent(strings.Join(lines, "\n"))
 	// Ensure cursor is visible.
-	if m.containerCursor < m.containerVP.YOffset {
+	if m.containerCursor < m.containerVP.YOffset() {
 		m.containerVP.SetYOffset(m.containerCursor)
-	} else if m.containerVP.Height > 0 && m.containerCursor >= m.containerVP.YOffset+m.containerVP.Height {
-		m.containerVP.SetYOffset(m.containerCursor - m.containerVP.Height + 1)
+	} else if m.containerVP.Height() > 0 && m.containerCursor >= m.containerVP.YOffset()+m.containerVP.Height() {
+		m.containerVP.SetYOffset(m.containerCursor - m.containerVP.Height() + 1)
 	}
 }
 

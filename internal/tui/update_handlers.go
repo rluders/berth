@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/progress"
-	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/table"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/rluders/berth/internal/controller"
 )
 
@@ -23,12 +23,12 @@ func (m Model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	if viewW < 0 {
 		viewW = 0
 	}
-	m.inspectViewPort.Width = viewW
-	m.inspectViewPort.Height = contentH
-	m.logViewPort.Width = viewW
-	m.logViewPort.Height = contentH
-	m.detailsViewPort.Width = viewW
-	m.detailsViewPort.Height = contentH
+	m.inspectViewPort.SetWidth(viewW)
+	m.inspectViewPort.SetHeight(contentH)
+	m.logViewPort.SetWidth(viewW)
+	m.logViewPort.SetHeight(contentH)
+	m.detailsViewPort.SetWidth(viewW)
+	m.detailsViewPort.SetHeight(contentH)
 
 	m.syncContainerViewport()
 
@@ -50,7 +50,7 @@ func (m *Model) syncTableSizes(width, contentH int) {
 	}
 
 	m.builtCols = BuildColumns(width, containerCols)
-	m.containerVP.Width = width
+	m.containerVP.SetWidth(width)
 
 	// Table header renders 2 lines (text + BorderBottom). Always compute using
 	// ContainersView content height (which subtracts the command-preview footer line).
@@ -58,7 +58,7 @@ func (m *Model) syncTableSizes(width, contentH int) {
 	if m.currentView != ContainersView {
 		containerContentH-- // ContainersView subtracts extra line for command preview
 	}
-	m.containerVP.Height = max(0, containerContentH-2) // -2: table header text + border bottom
+	m.containerVP.SetHeight(max(0, containerContentH-2)) // -2: table header text + border bottom
 
 	m.imageTable.SetWidth(width)
 	m.imageTable.SetHeight(contentH)
@@ -232,10 +232,8 @@ func (m Model) handleProgressTickMsg() (Model, tea.Cmd) {
 }
 
 func (m Model) handleProgressFrameMsg(msg progress.FrameMsg) (Model, tea.Cmd) {
-	raw, cmd := m.progressBar.Update(msg)
-	if pb, ok := raw.(progress.Model); ok {
-		m.progressBar = pb
-	}
+	pb, cmd := m.progressBar.Update(msg)
+	m.progressBar = pb
 	return m, cmd
 }
 

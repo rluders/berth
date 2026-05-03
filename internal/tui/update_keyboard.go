@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 var mainTabs = []ViewType{ContainersView, ImagesView, VolumesView, NetworksView, SystemView}
 
 // handleKeyMsg dispatches keyboard events to the appropriate handler.
-func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	slog.Debug("handleKeyMsg", "key", msg.String())
 
 	// Modal dialog intercepts all keys.
@@ -97,7 +97,7 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleFilterKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleFilterKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, Keys.Filter.Cancel), key.Matches(msg, Keys.Filter.Submit):
 		m.filterActive = false
@@ -123,7 +123,7 @@ func (m *Model) rebuildFilteredTables() {
 	}
 }
 
-func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleContainersKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	// Movement keys — handled manually since we no longer use bubbles/table.
@@ -151,12 +151,12 @@ func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.lastActionKey = ""
 		return m, nil
 	case "pgup", "ctrl+b":
-		step := max(1, m.containerVP.Height)
+		step := max(1, m.containerVP.Height())
 		m.moveContainerCursor(-step)
 		m.lastActionKey = ""
 		return m, nil
 	case "pgdown", "ctrl+f":
-		step := max(1, m.containerVP.Height)
+		step := max(1, m.containerVP.Height())
 		m.moveContainerCursor(+step)
 		m.lastActionKey = ""
 		return m, nil
@@ -229,7 +229,7 @@ func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 }
 
 // dispatchContainerAction handles action keys (Details, Start, Stop, etc.) for a resolved container.
-func (m Model) dispatchContainerAction(msg tea.KeyMsg, id, name string, cmds []tea.Cmd) (Model, tea.Cmd) {
+func (m Model) dispatchContainerAction(msg tea.KeyPressMsg, id, name string, cmds []tea.Cmd) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, Keys.Container.Details):
 		m.pushView(DetailsView)
@@ -306,7 +306,7 @@ func (m *Model) startComposeOp(project, workDir string, fn func(context.Context,
 }
 
 // dispatchComposeAction handles compose project-level action keys when a group row is selected.
-func (m Model) dispatchComposeAction(msg tea.KeyMsg, project, workDir string, cmds []tea.Cmd) (Model, tea.Cmd) {
+func (m Model) dispatchComposeAction(msg tea.KeyPressMsg, project, workDir string, cmds []tea.Cmd) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, Keys.Compose.Up):
 		m.statusMessage = fmt.Sprintf("docker compose up -d  [%s]", project)
@@ -348,7 +348,7 @@ func (m Model) dispatchComposeAction(msg tea.KeyMsg, project, workDir string, cm
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) handleImagesKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleImagesKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 	m.imageTable, cmd = m.imageTable.Update(msg)
@@ -378,7 +378,7 @@ func (m Model) handleImagesKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) handleVolumesKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleVolumesKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 	m.volumeTable, cmd = m.volumeTable.Update(msg)
@@ -402,7 +402,7 @@ func (m Model) handleVolumesKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) handleNetworksKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleNetworksKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 	m.networkTable, cmd = m.networkTable.Update(msg)
@@ -421,7 +421,7 @@ func (m Model) handleNetworksKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) handleSystemKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleSystemKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, Keys.System.BasicCleanup):
 		m.modal = NewConfirmModal(
@@ -457,13 +457,13 @@ func (m Model) handleSystemKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleInspectKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleInspectKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.inspectViewPort, cmd = m.inspectViewPort.Update(msg)
 	return m, cmd
 }
 
-func (m Model) handleLogsKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleLogsKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, Keys.Logs.Pause):
 		m.logFollowing = false
@@ -482,7 +482,7 @@ func (m Model) handleLogsKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleDetailsKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleDetailsKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.detailsViewPort, cmd = m.detailsViewPort.Update(msg)
 	return m, cmd

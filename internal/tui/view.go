@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // colorizeLogLine applies color coding based on log level keywords.
@@ -51,41 +52,42 @@ func buildColorizedLogContent(lines []string, showLineNumbers bool) string {
 }
 
 // View renders the main TUI view.
-func (m Model) View() string {
+func (m Model) View() tea.View {
+	var content string
 	if m.err != nil {
-		return currentTheme.ModalBoxStyle.Render(
+		content = currentTheme.ModalBoxStyle.Render(
 			currentTheme.LogErrorStyle.Render("Error: "+m.err.Error()) +
 				"\n\nPress q to quit.",
 		)
+	} else {
+		header := m.renderHeader()
+		tabBar := m.renderTabBar()
+
+		if m.showHelp {
+			content = lipgloss.JoinVertical(lipgloss.Top, header, tabBar, m.renderHelp())
+		} else {
+			body := m.renderContent()
+			if m.modal != nil {
+				body = m.renderModal(body)
+			}
+			footer := m.renderFooter()
+			content = lipgloss.JoinVertical(
+				lipgloss.Top,
+				header,
+				tabBar,
+				lipgloss.NewStyle().
+					Width(m.width).
+					Height(m.contentHeight()).
+					Render(body),
+				footer,
+			)
+		}
 	}
 
-	header := m.renderHeader()
-	tabBar := m.renderTabBar()
-
-	// Help overlay takes full screen.
-	if m.showHelp {
-		return lipgloss.JoinVertical(lipgloss.Top, header, tabBar, m.renderHelp())
-	}
-
-	content := m.renderContent()
-
-	// Modal overlaid on top of content.
-	if m.modal != nil {
-		content = m.renderModal(content)
-	}
-
-	footer := m.renderFooter()
-
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		header,
-		tabBar,
-		lipgloss.NewStyle().
-			Width(m.width).
-			Height(m.contentHeight()).
-			Render(content),
-		footer,
-	)
+	v := tea.NewView(content)
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 // renderHeader renders the top bar with logo, view name, and engine badge.

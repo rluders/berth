@@ -3,8 +3,8 @@ package tui
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // handleMouseMsg dispatches mouse events to the appropriate handler.
@@ -14,12 +14,12 @@ func (m Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 
-	switch msg.Button {
-	case tea.MouseButtonWheelUp:
+	switch msg.Mouse().Button {
+	case tea.MouseWheelUp:
 		return m.handleScrollUp()
-	case tea.MouseButtonWheelDown:
+	case tea.MouseWheelDown:
 		return m.handleScrollDown()
-	case tea.MouseButtonLeft:
+	case tea.MouseLeft:
 		return m.handleLeftClick(msg)
 	}
 
@@ -33,15 +33,15 @@ func (m Model) handleScrollUp() (Model, tea.Cmd) {
 		return m, nil
 	case ImagesView:
 		var cmd tea.Cmd
-		m.imageTable, cmd = m.imageTable.Update(tea.KeyMsg{Type: tea.KeyUp})
+		m.imageTable, cmd = m.imageTable.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 		return m, cmd
 	case VolumesView:
 		var cmd tea.Cmd
-		m.volumeTable, cmd = m.volumeTable.Update(tea.KeyMsg{Type: tea.KeyUp})
+		m.volumeTable, cmd = m.volumeTable.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 		return m, cmd
 	case NetworksView:
 		var cmd tea.Cmd
-		m.networkTable, cmd = m.networkTable.Update(tea.KeyMsg{Type: tea.KeyUp})
+		m.networkTable, cmd = m.networkTable.Update(tea.KeyPressMsg{Code: tea.KeyUp})
 		return m, cmd
 	case InspectView:
 		m.inspectViewPort.ScrollUp(3)
@@ -61,15 +61,15 @@ func (m Model) handleScrollDown() (Model, tea.Cmd) {
 		return m, nil
 	case ImagesView:
 		var cmd tea.Cmd
-		m.imageTable, cmd = m.imageTable.Update(tea.KeyMsg{Type: tea.KeyDown})
+		m.imageTable, cmd = m.imageTable.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		return m, cmd
 	case VolumesView:
 		var cmd tea.Cmd
-		m.volumeTable, cmd = m.volumeTable.Update(tea.KeyMsg{Type: tea.KeyDown})
+		m.volumeTable, cmd = m.volumeTable.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		return m, cmd
 	case NetworksView:
 		var cmd tea.Cmd
-		m.networkTable, cmd = m.networkTable.Update(tea.KeyMsg{Type: tea.KeyDown})
+		m.networkTable, cmd = m.networkTable.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 		return m, cmd
 	case InspectView:
 		m.inspectViewPort.ScrollDown(3)
@@ -82,19 +82,20 @@ func (m Model) handleScrollDown() (Model, tea.Cmd) {
 }
 
 func (m Model) handleLeftClick(msg tea.MouseMsg) (Model, tea.Cmd) {
+	mouse := msg.Mouse()
 	// Calculate header height to determine if click landed on tab bar.
 	headerH := lipgloss.Height(currentTheme.HeaderStyle.Render(m.headerText()))
 	tabBarH := 1 // tab bar is 1 line, rendered after header in Task 8
 
 	// Click on header area: check for tab bar clicks.
-	if msg.Y >= headerH && msg.Y < headerH+tabBarH {
-		return m.handleTabClick(msg.X)
+	if mouse.Y >= headerH && mouse.Y < headerH+tabBarH {
+		return m.handleTabClick(mouse.X)
 	}
 
 	// Click in content area: handle table row selection.
 	contentStartY := headerH + tabBarH
-	if msg.Y >= contentStartY {
-		return m.handleTableClick(msg.Y-contentStartY, msg.X)
+	if mouse.Y >= contentStartY {
+		return m.handleTableClick(mouse.Y-contentStartY, mouse.X)
 	}
 
 	return m, nil
@@ -152,7 +153,7 @@ func (m Model) handleTableClick(relY, _ int) (Model, tea.Cmd) {
 	switch m.currentView {
 	case ContainersView:
 		// relY==0 is the header line; data rows start at relY==1.
-		dataIdx := rowIndex + m.containerVP.YOffset
+		dataIdx := rowIndex + m.containerVP.YOffset()
 		if dataIdx >= 0 && dataIdx < len(m.rows) {
 			m.containerCursor = dataIdx
 			m.syncContainerViewport()
@@ -162,7 +163,7 @@ func (m Model) handleTableClick(relY, _ int) (Model, tea.Cmd) {
 		if rowIndex < len(rows) {
 			m.imageTable.GotoTop()
 			for i := 0; i < rowIndex; i++ {
-				m.imageTable, _ = m.imageTable.Update(tea.KeyMsg{Type: tea.KeyDown})
+				m.imageTable, _ = m.imageTable.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 			}
 		}
 	case VolumesView:
@@ -170,7 +171,7 @@ func (m Model) handleTableClick(relY, _ int) (Model, tea.Cmd) {
 		if rowIndex < len(rows) {
 			m.volumeTable.GotoTop()
 			for i := 0; i < rowIndex; i++ {
-				m.volumeTable, _ = m.volumeTable.Update(tea.KeyMsg{Type: tea.KeyDown})
+				m.volumeTable, _ = m.volumeTable.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 			}
 		}
 	case NetworksView:
@@ -178,7 +179,7 @@ func (m Model) handleTableClick(relY, _ int) (Model, tea.Cmd) {
 		if rowIndex < len(rows) {
 			m.networkTable.GotoTop()
 			for i := 0; i < rowIndex; i++ {
-				m.networkTable, _ = m.networkTable.Update(tea.KeyMsg{Type: tea.KeyDown})
+				m.networkTable, _ = m.networkTable.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 			}
 		}
 	}

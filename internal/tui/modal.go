@@ -3,9 +3,9 @@ package tui
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // ButtonKind controls button visual style.
@@ -149,7 +149,7 @@ var modalKeys = struct {
 }
 
 // handleModalKey processes key input when a modal is active.
-func (m Model) handleModalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+func (m Model) handleModalKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	modal := m.modal
 	if modal == nil {
 		return m, nil

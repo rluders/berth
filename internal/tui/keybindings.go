@@ -1,6 +1,6 @@
 package tui
 
-import "github.com/charmbracelet/bubbles/key"
+import "charm.land/bubbles/v2/key"
 
 // GlobalKeys holds key bindings available in all views.
 type GlobalKeys struct {

@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/rluders/berth/internal/tui"
 )
 
@@ -46,7 +46,7 @@ func main() {
 			}
 		}()
 		slog.Debug("Initializing Bubble Tea program...")
-		program = tea.NewProgram(tui.InitialModel(), tea.WithAltScreen(), tea.WithMouseCellMotion())
+		program = tea.NewProgram(tui.InitialModel())
 	}()
 
 	slog.Debug("Running Bubble Tea program...")
