@@ -5,7 +5,7 @@
 <div align="center">
 
 [![CI](https://github.com/rluders/berth/actions/workflows/ci.yml/badge.svg)](https://github.com/rluders/berth/actions/workflows/ci.yml)
-![Go](https://img.shields.io/badge/go-1.25+-00ADD8?logo=go&logoColor=white)
+![Go](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go&logoColor=white)
 [![Go Report Card](https://goreportcard.com/badge/github.com/rluders/berth)](https://goreportcard.com/report/github.com/rluders/berth)
 [![GitHub release](https://img.shields.io/github/v/release/rluders/berth?sort=semver)](https://github.com/rluders/berth/releases)
 [![codecov](https://codecov.io/gh/rluders/berth/graph/badge.svg)](https://codecov.io/gh/rluders/berth)
@@ -34,7 +34,7 @@ Berth is a comprehensive terminal user interface (TUI) application built in Go, 
 
 ### Prerequisites
 
--   [Go](https://golang.org/doc/install) (version 1.24 or higher recommended)
+-   [Go](https://golang.org/doc/install) (version 1.26 or higher recommended)
 -   [Docker](https://docs.docker.com/get-docker/) or [Podman](https://podman.io/docs/installation) installed and running
 
 ### Steps

@@ -1,10 +1,10 @@
 GO           := go
 APP_NAME     := berth
 APP_PATH     := ./cmd/berth
-DOCKER_IMAGE := berth-dev
-DOCKER_RUN   := docker run --rm -v $(shell pwd):/app -w /app $(DOCKER_IMAGE)
+PODMAN_IMAGE := berth-dev
+PODMAN_RUN   := podman run --rm -v $(shell pwd):/app:Z -w /app $(PODMAN_IMAGE)
 
-.PHONY: all build run clean test lint help docker-image docker-build docker-test docker-lint
+.PHONY: all build run clean test lint help podman-image podman-build podman-test podman-lint docker-image docker-build docker-test docker-lint
 
 all: build
 
@@ -38,21 +38,26 @@ lint:
 	# go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 		golangci-lint run ./...
 
-docker-image:
-	@echo "Building Docker dev image (Go 1.25)..."
-	docker build -t $(DOCKER_IMAGE) -f Dockerfile.dev .
+podman-image:
+	@echo "Building Podman dev image (Go 1.26)..."
+	podman build -t $(PODMAN_IMAGE) -f Dockerfile.dev .
 
-docker-build: docker-image
-	@echo "Building $(APP_NAME) in Docker..."
-	$(DOCKER_RUN) go build -o $(APP_NAME) $(APP_PATH)
+podman-build: podman-image
+	@echo "Building $(APP_NAME) in Podman..."
+	$(PODMAN_RUN) go build -o $(APP_NAME) $(APP_PATH)
 
-docker-test: docker-image
-	@echo "Running tests in Docker..."
-	$(DOCKER_RUN) sh -c "mockery --config .mockery.yaml && go test ./..."
+podman-test: podman-image
+	@echo "Running tests in Podman..."
+	$(PODMAN_RUN) sh -c "mockery --config .mockery.yaml && go test ./..."
 
-docker-lint: docker-image
-	@echo "Running lint in Docker..."
-	$(DOCKER_RUN) sh -c "mockery --config .mockery.yaml && golangci-lint run --timeout=5m ./..."
+podman-lint: podman-image
+	@echo "Running lint in Podman..."
+	$(PODMAN_RUN) sh -c "mockery --config .mockery.yaml && golangci-lint run --timeout=5m ./..."
+
+docker-image: podman-image
+docker-build: podman-build
+docker-test: podman-test
+docker-lint: podman-lint
 
 help:
 	@echo "Usage: make <command>"
@@ -63,8 +68,8 @@ help:
 	@echo "  clean        : Removes build artifacts and the application binary"
 	@echo "  test         : Runs all tests"
 	@echo "  lint         : Runs golangci-lint"
-	@echo "  docker-image : Builds Docker dev image (Go 1.25)"
-	@echo "  docker-build : Builds the binary inside Docker"
-	@echo "  docker-test  : Runs tests inside Docker"
-	@echo "  docker-lint  : Runs lint inside Docker"
+	@echo "  podman-image : Builds Podman dev image (Go 1.26)"
+	@echo "  podman-build : Builds the binary inside Podman"
+	@echo "  podman-test  : Runs tests inside Podman"
+	@echo "  podman-lint  : Runs lint inside Podman"
 	@echo "  help         : Displays this help message"
