@@ -29,9 +29,8 @@ func (m Model) handleMouseMsg(msg tea.MouseMsg) (Model, tea.Cmd) {
 func (m Model) handleScrollUp() (Model, tea.Cmd) {
 	switch m.currentView {
 	case ContainersView:
-		var cmd tea.Cmd
-		m.containerTable, cmd = m.containerTable.Update(tea.KeyMsg{Type: tea.KeyUp})
-		return m, cmd
+		m.containerVP.LineUp(3)
+		return m, nil
 	case ImagesView:
 		var cmd tea.Cmd
 		m.imageTable, cmd = m.imageTable.Update(tea.KeyMsg{Type: tea.KeyUp})
@@ -58,9 +57,8 @@ func (m Model) handleScrollUp() (Model, tea.Cmd) {
 func (m Model) handleScrollDown() (Model, tea.Cmd) {
 	switch m.currentView {
 	case ContainersView:
-		var cmd tea.Cmd
-		m.containerTable, cmd = m.containerTable.Update(tea.KeyMsg{Type: tea.KeyDown})
-		return m, cmd
+		m.containerVP.LineDown(3)
+		return m, nil
 	case ImagesView:
 		var cmd tea.Cmd
 		m.imageTable, cmd = m.imageTable.Update(tea.KeyMsg{Type: tea.KeyDown})
@@ -153,18 +151,11 @@ func (m Model) handleTableClick(relY, _ int) (Model, tea.Cmd) {
 
 	switch m.currentView {
 	case ContainersView:
-		rows := m.containerTable.Rows()
-		if rowIndex < len(rows) {
-			for i := 0; i < rowIndex; i++ {
-				var cmd tea.Cmd
-				m.containerTable, cmd = m.containerTable.Update(tea.KeyMsg{Type: tea.KeyDown})
-				_ = cmd
-			}
-			// Reset to top first, then navigate to target row.
-			m.containerTable.GotoTop()
-			for i := 0; i < rowIndex; i++ {
-				m.containerTable, _ = m.containerTable.Update(tea.KeyMsg{Type: tea.KeyDown})
-			}
+		// relY==0 is the header line; data rows start at relY==1.
+		dataIdx := rowIndex + m.containerVP.YOffset
+		if dataIdx >= 0 && dataIdx < len(m.rows) {
+			m.containerCursor = dataIdx
+			m.syncContainerViewport()
 		}
 	case ImagesView:
 		rows := m.imageTable.Rows()

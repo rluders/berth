@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/rluders/berth/internal/controller"
 	"github.com/rluders/berth/internal/engine"
 	"github.com/rluders/berth/internal/utils"
@@ -26,11 +27,14 @@ type Model struct {
 	currentView ViewType
 	viewStack   []ViewType
 
-	// Tables
-	containerTable table.Model
-	imageTable     table.Model
-	volumeTable    table.Model
-	networkTable   table.Model
+	// Container viewport (replaces table.Model — bypasses double-styling that hides Status)
+	containerVP     viewport.Model
+	containerCursor int
+
+	// Tables (images, volumes, networks still use bubbles/table)
+	imageTable   table.Model
+	volumeTable  table.Model
+	networkTable table.Model
 
 	// Raw data (for filtering / grouping)
 	containers []controller.Container
@@ -113,11 +117,6 @@ func InitialModel() Model {
 	slog.Debug("InitialModel called")
 
 	initCols := BuildColumns(116, containerCols) // 120-col default until first WindowSizeMsg
-	containerTable := table.New(
-		table.WithColumns(buildTableColumns(initCols)),
-		table.WithFocused(true),
-		table.WithHeight(0),
-	)
 
 	imageTable := table.New(
 		table.WithColumns([]table.Column{
@@ -156,7 +155,6 @@ func InitialModel() Model {
 	s := table.DefaultStyles()
 	s.Header = currentTheme.TableHeaderStyle
 	s.Selected = currentTheme.TableSelectedStyle
-	containerTable.SetStyles(s)
 	imageTable.SetStyles(s)
 	volumeTable.SetStyles(s)
 	networkTable.SetStyles(s)
@@ -166,13 +164,13 @@ func InitialModel() Model {
 	fi.CharLimit = 60
 
 	return Model{
-		engineType:          engine.DetectEngine(),
-		currentView:         ContainersView,
-		containerTable:      containerTable,
-		builtCols:          initCols,
-		imageTable:     imageTable,
-		volumeTable:    volumeTable,
-		networkTable:   networkTable,
+		engineType:      engine.DetectEngine(),
+		currentView:     ContainersView,
+		containerVP:     viewport.New(0, 0),
+		builtCols:       initCols,
+		imageTable:      imageTable,
+		volumeTable:     volumeTable,
+		networkTable:    networkTable,
 		containerStats:  make(map[string]controller.ContainerStat),
 		collapsedGroups: make(map[string]bool),
 		systemInfo:     controller.SystemInfo{},
@@ -274,7 +272,7 @@ func (m Model) contentHeight() int {
 	return h
 }
 
-// recomputeRows applies filter, rebuilds m.rows via BuildRows, and syncs the table.
+// recomputeRows applies filter, rebuilds m.rows via BuildRows, and syncs the viewport.
 func (m *Model) recomputeRows() {
 	filter := strings.ToLower(m.filterInput.Value())
 	var filtered []controller.Container
@@ -288,59 +286,106 @@ func (m *Model) recomputeRows() {
 		filtered = append(filtered, c)
 	}
 	m.rows = BuildRows(filtered, m.collapsedGroups)
-	m.containerTable.SetRows(m.buildTableRowsFromRows())
+	// Clamp cursor after filter may reduce row count.
+	if len(m.rows) > 0 && m.containerCursor >= len(m.rows) {
+		m.containerCursor = len(m.rows) - 1
+	}
+	m.syncContainerViewport()
 }
 
-// buildTableRowsFromRows renders m.rows into table.Row values for the bubble-tea table.
-func (m Model) buildTableRowsFromRows() []table.Row {
-	var tableRows []table.Row
-	for _, row := range m.rows {
-		switch row.Type {
-		case RowTypeGroup:
-			running, total := groupAggStatus(row.Containers)
-			label := GroupStatusColor(running, total)
-			prefix := "▼ "
-			if row.Collapsed {
-				prefix = "▶ "
-			}
-			values := []string{currentTheme.GroupHeaderStyle.Render(prefix + row.GroupID), label, "", "", "", "", ""}
-			tableRows = append(tableRows, RenderRow(m.builtCols, values))
+// renderContainerHeader returns a styled header line for the containers viewport.
+func (m Model) renderContainerHeader() string {
+	cells := make([]string, len(m.builtCols))
+	for i, col := range m.builtCols {
+		cells[i] = renderCell(padHeader(col.Header, col.Width, col.Align), col.Width, col.Align)
+	}
+	return currentTheme.TableHeaderStyle.Render(strings.Join(cells, " "))
+}
 
-		case RowTypeContainer:
-			c := row.Container
-			cpuStr := "-"
-			memStr := "-"
-			if c.State == "running" {
-				stat, ok := m.containerStats[c.ID]
-				if !ok {
-					cpuStr = "..."
-					memStr = "..."
+// renderContainerViewRow renders one row as a full-width string with optional selection highlight.
+func (m Model) renderContainerViewRow(row Row, selected bool) string {
+	var values []string
+	switch row.Type {
+	case RowTypeGroup:
+		running, total := groupAggStatus(row.Containers)
+		label := GroupStatusColor(running, total)
+		prefix := "▼ "
+		if row.Collapsed {
+			prefix = "▶ "
+		}
+		values = []string{currentTheme.GroupHeaderStyle.Render(prefix + row.GroupID), label, "", "", "", "", ""}
+
+	case RowTypeContainer:
+		c := row.Container
+		cpuStr := "-"
+		memStr := "-"
+		if c.State == "running" {
+			stat, ok := m.containerStats[c.ID]
+			if !ok {
+				cpuStr = "..."
+				memStr = "..."
+			} else {
+				cpuStr = fmt.Sprintf("%.1f", stat.CPUPercent)
+				if stat.MemLimit > 0 {
+					memStr = utils.FormatBytes(stat.MemUsage)
 				} else {
-					cpuStr = fmt.Sprintf("%.1f", stat.CPUPercent)
-					if stat.MemLimit > 0 {
-						memStr = utils.FormatBytes(stat.MemUsage)
-					} else {
-						memStr = "..."
-					}
+					memStr = "..."
 				}
 			}
-			name := c.Names
-			if row.GroupID != "" {
-				name = currentTheme.GroupChildStyle.Render("  › " + c.Names)
-			}
-			values := []string{
-				name,
-				FormatStatus(c.State),
-				c.Image,
-				c.Ports,
-				cpuStr,
-				memStr,
-				utils.FormatAge(c.CreatedAt),
-			}
-			tableRows = append(tableRows, RenderRow(m.builtCols, values))
+		}
+		name := c.Names
+		if row.GroupID != "" {
+			name = currentTheme.GroupChildStyle.Render("  › " + c.Names)
+		}
+		values = []string{
+			name,
+			FormatStatus(c.State),
+			simplifyImage(c.Image),
+			c.Ports,
+			cpuStr,
+			memStr,
+			utils.FormatAge(c.CreatedAt),
 		}
 	}
-	return tableRows
+
+	line := strings.Join(RenderRow(m.builtCols, values), " ")
+	if selected {
+		// Strip ANSI from pre-styled cells so selection background renders uniformly.
+		line = currentTheme.TableSelectedStyle.Width(m.width).Render(ansi.Strip(line))
+	}
+	return line
+}
+
+// syncContainerViewport re-renders all rows into the viewport and scrolls to keep cursor visible.
+func (m *Model) syncContainerViewport() {
+	lines := make([]string, len(m.rows))
+	for i, row := range m.rows {
+		lines[i] = m.renderContainerViewRow(row, i == m.containerCursor)
+	}
+	m.containerVP.SetContent(strings.Join(lines, "\n"))
+	// Ensure cursor is visible.
+	if m.containerCursor < m.containerVP.YOffset {
+		m.containerVP.SetYOffset(m.containerCursor)
+	} else if m.containerVP.Height > 0 && m.containerCursor >= m.containerVP.YOffset+m.containerVP.Height {
+		m.containerVP.SetYOffset(m.containerCursor - m.containerVP.Height + 1)
+	}
+}
+
+// moveContainerCursor moves the cursor by delta, clamped to valid row range.
+func (m *Model) moveContainerCursor(delta int) {
+	n := len(m.rows)
+	if n == 0 {
+		return
+	}
+	m.containerCursor = max(0, min(m.containerCursor+delta, n-1))
+	m.syncContainerViewport()
+}
+
+// simplifyImage strips registry/org prefixes, returning only the last path
+// segment (image name + tag). e.g. docker.io/library/postgres:16 → postgres:16
+func simplifyImage(img string) string {
+	parts := strings.Split(img, "/")
+	return parts[len(parts)-1]
 }
 
 // buildImageRows produces filtered image rows.

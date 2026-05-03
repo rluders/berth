@@ -3,7 +3,7 @@ package tui
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -28,8 +28,8 @@ type Column struct {
 // containerCols defines the canonical column specs for the containers table.
 var containerCols = []Column{
 	{Header: "Name",   MinWidth: 20, Align: AlignLeft},
-	{Header: "Status", Fixed:    12, Align: AlignLeft},
-	{Header: "Image",  MinWidth: 30, Align: AlignLeft},
+	{Header: "Status", Fixed:    14, Align: AlignLeft},
+	{Header: "Image",  MinWidth: 20, Align: AlignLeft},
 	{Header: "Ports",  Fixed:    18, Align: AlignLeft},
 	{Header: "CPU%",   Fixed:     6, Align: AlignRight},
 	{Header: "Mem",    Fixed:    10, Align: AlignRight},
@@ -85,44 +85,28 @@ func BuildColumns(width int, specs []Column) []Column {
 	return cols
 }
 
-// RenderRow builds a table row with ANSI-safe truncation and alignment.
-//
-// The bubbles table internally applies runewidth.Truncate to each cell value.
-// runewidth counts ANSI escape sequences as visible characters, so pre-rendering
-// with lipgloss Width inflates the runewidth beyond the column width and causes
-// the table to truncate — destroying the ANSI prefix and making styled text invisible.
-//
-// Fix: pass values without lipgloss pre-padding. The table's own lipgloss.Width
-// (which is charmbracelet/x/ansi-aware) handles padding correctly after truncation.
-// We only apply ANSI-safe ansi.Truncate here to cap content before the table sees it.
-// Right-aligned columns get plain-text padding (no ANSI) so runewidth stays accurate.
-func RenderRow(cols []Column, values []string) table.Row {
-	row := make(table.Row, len(cols))
-	for i, v := range values {
-		w := cols[i].Width
-		v = ansi.Truncate(v, w, "…")
-		if cols[i].Align == AlignRight {
-			vw := ansi.StringWidth(v)
-			if vw < w {
-				v = strings.Repeat(" ", w-vw) + v
-			}
-		}
-		row[i] = v
+// renderCell truncates to width (ANSI-safe) then applies lipgloss padding/alignment.
+// Truncate happens before styling so ANSI escape codes from styled values (e.g.
+// FormatStatus) are measured correctly and not re-counted by the style engine.
+func renderCell(value string, width int, align AlignType) string {
+	value = ansi.Truncate(value, width, "…")
+
+	style := lipgloss.NewStyle().Width(width)
+	if align == AlignRight {
+		style = style.Align(lipgloss.Right)
+	} else {
+		style = style.Align(lipgloss.Left)
 	}
-	return row
+	return style.Render(value)
 }
 
-// buildTableColumns builds Bubble Tea table columns with plain-padded headers.
-// Headers are ASCII so plain string padding avoids ANSI inflation in runewidth.
-func buildTableColumns(cols []Column) []table.Column {
-	result := make([]table.Column, len(cols))
-	for i, col := range cols {
-		result[i] = table.Column{
-			Title: padHeader(col.Header, col.Width, col.Align),
-			Width: col.Width,
-		}
+// RenderRow builds a row of pre-styled cells using renderCell for each column.
+func RenderRow(cols []Column, values []string) []string {
+	row := make([]string, len(cols))
+	for i, v := range values {
+		row[i] = renderCell(v, cols[i].Width, cols[i].Align)
 	}
-	return result
+	return row
 }
 
 // padHeader returns a plain-text header string padded to exactly width chars.

@@ -165,7 +165,7 @@ func (m Model) renderTabBar() string {
 func (m Model) renderContent() string {
 	switch m.currentView {
 	case ContainersView:
-		return m.containerTable.View()
+		return m.renderContainerHeader() + "\n" + m.containerVP.View()
 	case ImagesView:
 		return m.imageTable.View()
 	case VolumesView:
@@ -286,7 +286,7 @@ func (m Model) BuildCommandPreview() string {
 	if len(m.rows) == 0 {
 		return " "
 	}
-	idx := m.containerTable.Cursor()
+	idx := m.containerCursor
 	if idx < 0 || idx >= len(m.rows) {
 		return " "
 	}
@@ -379,7 +379,7 @@ func (m Model) renderKeyHints() string {
 	var viewHints []hint
 	switch m.currentView {
 	case ContainersView:
-		idx := m.containerTable.Cursor()
+		idx := m.containerCursor
 		if idx >= 0 && idx < len(m.rows) && m.rows[idx].Type == RowTypeGroup {
 			viewHints = []hint{
 				{"↑/↓", "move"}, {"→/←", "expand/collapse"},

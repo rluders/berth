@@ -17,10 +17,11 @@ func (m Model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	m.height = msg.Height
 
 	m.builtCols = BuildColumns(msg.Width-4, containerCols)
-	m.containerTable.SetColumns(buildTableColumns(m.builtCols))
 
 	contentH := m.contentHeight()
-	m.containerTable.SetHeight(contentH)
+	// containerVP height is contentH-1 (header takes one line).
+	m.containerVP.Width = msg.Width
+	m.containerVP.Height = contentH - 1
 	m.imageTable.SetHeight(contentH)
 	m.volumeTable.SetHeight(contentH)
 	m.networkTable.SetHeight(contentH)
@@ -35,6 +36,8 @@ func (m Model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	m.logViewPort.Height = contentH
 	m.detailsViewPort.Width = viewW
 	m.detailsViewPort.Height = contentH
+
+	m.syncContainerViewport()
 
 	if m.currentView == InspectView && !m.inspectReady && m.inspectRawContent != "" {
 		m.inspectViewPort.SetContent(prettyJSON(m.inspectRawContent))

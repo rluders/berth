@@ -125,9 +125,42 @@ func (m *Model) rebuildFilteredTables() {
 
 func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	var cmds []tea.Cmd
-	var cmd tea.Cmd
-	m.containerTable, cmd = m.containerTable.Update(msg)
-	cmds = append(cmds, cmd)
+
+	// Movement keys — handled manually since we no longer use bubbles/table.
+	switch msg.String() {
+	case "up", "k":
+		m.moveContainerCursor(-1)
+		m.lastActionKey = ""
+		return m, nil
+	case "down", "j":
+		m.moveContainerCursor(+1)
+		m.lastActionKey = ""
+		return m, nil
+	case "g", "home":
+		if len(m.rows) > 0 {
+			m.containerCursor = 0
+			m.syncContainerViewport()
+		}
+		m.lastActionKey = ""
+		return m, nil
+	case "G", "end":
+		if len(m.rows) > 0 {
+			m.containerCursor = len(m.rows) - 1
+			m.syncContainerViewport()
+		}
+		m.lastActionKey = ""
+		return m, nil
+	case "pgup", "ctrl+b":
+		step := max(1, m.containerVP.Height)
+		m.moveContainerCursor(-step)
+		m.lastActionKey = ""
+		return m, nil
+	case "pgdown", "ctrl+f":
+		step := max(1, m.containerVP.Height)
+		m.moveContainerCursor(+step)
+		m.lastActionKey = ""
+		return m, nil
+	}
 
 	// Track last action key for command preview; movement keys reset to default.
 	switch msg.String() {
@@ -143,11 +176,11 @@ func (m Model) handleContainersKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 	}
 
-	if len(m.containerTable.SelectedRow()) == 0 {
+	if len(m.rows) == 0 {
 		return m, tea.Batch(cmds...)
 	}
 
-	idx := m.containerTable.Cursor()
+	idx := m.containerCursor
 	if idx < 0 || idx >= len(m.rows) {
 		return m, tea.Batch(cmds...)
 	}
