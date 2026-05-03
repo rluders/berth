@@ -1,0 +1,61 @@
+package tui
+
+import (
+	"github.com/rluders/berth/internal/controller"
+)
+
+// ViewType represents the different views in the TUI.
+type ViewType int
+
+const (
+	ContainersView ViewType = iota
+	ImagesView
+	VolumesView
+	NetworksView
+	SystemView
+	InspectView
+	LogsView
+	DetailsView
+)
+
+// progressMsg drives the progress bar for long operations.
+type progressMsg struct {
+	percent float64
+	label   string
+	done    bool
+}
+
+// progressTickMsg animates the progress bar while an operation runs.
+type progressTickMsg struct{}
+
+// Typed message types for the Update dispatcher.
+type (
+	containerListMsg  []controller.Container
+	imageListMsg      []controller.Image
+	volumeListMsg     []controller.Volume
+	networkListMsg    []controller.Network
+	systemInfoMsg     controller.SystemInfo
+	logChunkMsg       string
+	logStreamDoneMsg  struct{}
+	inspectMsg        string
+	detailsMsg        controller.ContainerDetails
+	containerStatsMsg map[string]controller.ContainerStat
+	statsTickMsg      struct{}
+	refreshTickMsg    struct{}
+	statusMsg         string
+	errMsg            struct{ err error }
+
+	// composeOutputMsg carries one streamed line from an ongoing compose operation.
+	composeOutputMsg struct {
+		project string
+		line    string
+		ch      <-chan string
+	}
+	// composeDoneMsg signals a compose operation completed (with or without error).
+	composeDoneMsg struct {
+		project string
+		err     error
+	}
+)
+
+func (e errMsg) Error() string { return e.err.Error() }

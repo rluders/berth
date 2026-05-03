@@ -64,21 +64,21 @@ func BasicCleanup() (string, error) {
 
 	_, err := systemService.ContainersPrune(context.Background(), filters.Args{})
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune containers: %s\n", err))
+		fmt.Fprintf(&output, "Failed to prune containers: %s\n", err)
 	} else {
 		output.WriteString("Containers pruned successfully\n")
 	}
 
 	_, err = systemService.NetworksPrune(context.Background(), filters.Args{})
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune networks: %s\n", err))
+		fmt.Fprintf(&output, "Failed to prune networks: %s\n", err)
 	} else {
 		output.WriteString("Networks pruned successfully\n")
 	}
 
 	_, err = systemService.ImagesPrune(context.Background(), filters.Args{})
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune images: %s\n", err))
+		fmt.Fprintf(&output, "Failed to prune images: %s\n", err)
 	} else {
 		output.WriteString("Images pruned successfully\n")
 	}
@@ -92,7 +92,7 @@ func AdvancedCleanup() (string, error) {
 
 	_, err := systemService.VolumesPrune(context.Background(), filters.Args{})
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune volumes: %s\n", err))
+		fmt.Fprintf(&output, "Failed to prune volumes: %s\n", err)
 	} else {
 		output.WriteString("Volumes pruned successfully\n")
 	}
@@ -101,7 +101,7 @@ func AdvancedCleanup() (string, error) {
 	args.Add("dangling", "true")
 	_, err = systemService.ImagesPrune(context.Background(), args)
 	if err != nil {
-		output.WriteString(fmt.Sprintf("Failed to prune dangling images: %s\n", err))
+		fmt.Fprintf(&output, "Failed to prune dangling images: %s\n", err)
 	} else {
 		output.WriteString("Dangling images pruned successfully\n")
 	}

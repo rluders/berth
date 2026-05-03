@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/docker/docker/api/types/filters"
 	dockerImageTypes "github.com/docker/docker/api/types/image"
 	"github.com/rluders/berth/internal/engine"
 	"github.com/rluders/berth/internal/service"
@@ -58,4 +59,13 @@ func ListImages() ([]Image, error) {
 func RemoveImage(idOrName string) error {
 	_, err := imageService.ImageRemove(context.Background(), idOrName, dockerImageTypes.RemoveOptions{})
 	return err
+}
+
+// PruneImages removes dangling (unused) images.
+func PruneImages() (string, error) {
+	report, err := systemService.ImagesPrune(context.Background(), filters.NewArgs())
+	if err != nil {
+		return "", fmt.Errorf("failed to prune images: %w", err)
+	}
+	return fmt.Sprintf("Pruned %d image(s), reclaimed %d bytes", len(report.ImagesDeleted), report.SpaceReclaimed), nil
 }

@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [ '1.24', 'stable' ]
+        go-version: [ '1.26', 'stable' ]
 
     steps:
       - uses: actions/checkout@v4
@@ -24,10 +24,12 @@ jobs:
           check-latest: true
 
       - name: Generate mocks
-        run: make generate-mocks
+        run: |
+          go install github.com/vektra/mockery/v3@latest
+          mockery --config .mockery.yaml
 
       - name: Run golangci-lint (latest)
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           args: --timeout=5m
@@ -37,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [ '1.24', 'stable' ]
+        go-version: [ '1.26', 'stable' ]
 
     steps:
       - uses: actions/checkout@v4
@@ -50,13 +52,20 @@ jobs:
           cache: true
 
       - name: Generate mocks
-        run: make generate-mocks
+        run: |
+          go install github.com/vektra/mockery/v3@latest
+          mockery --config .mockery.yaml
 
       - name: Verify dependencies
         run: go mod tidy && git diff --exit-code go.mod go.sum
 
       - name: Build
-        run: make build
+        run: go build -o berth ./cmd/berth
 
       - name: Test
-        run: make test
+        run: go test ./... -coverprofile=coverage.txt
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

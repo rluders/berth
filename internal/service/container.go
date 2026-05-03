@@ -14,9 +14,11 @@ type ContainerService interface {
 	ListContainers(ctx context.Context, options containerTypes.ListOptions) ([]containerTypes.Summary, error)
 	StartContainer(ctx context.Context, containerID string, options containerTypes.StartOptions) error
 	StopContainer(ctx context.Context, containerID string, options containerTypes.StopOptions) error
+	RestartContainer(ctx context.Context, containerID string, options containerTypes.StopOptions) error
 	RemoveContainer(ctx context.Context, containerID string, options containerTypes.RemoveOptions) error
 	ContainerLogs(ctx context.Context, containerID string, options containerTypes.LogsOptions) (io.ReadCloser, error)
 	ContainerInspect(ctx context.Context, containerID string) (containerTypes.InspectResponse, error)
+	ContainerStats(ctx context.Context, containerID string, stream bool) (containerTypes.StatsResponseReader, error)
 }
 
 // dockerContainerService is a concrete implementation of ContainerService.
@@ -48,6 +50,11 @@ func (s *dockerContainerService) StopContainer(ctx context.Context, containerID 
 	return s.client.ContainerStop(ctx, containerID, options)
 }
 
+// RestartContainer restarts a container.
+func (s *dockerContainerService) RestartContainer(ctx context.Context, containerID string, options containerTypes.StopOptions) error {
+	return s.client.ContainerRestart(ctx, containerID, options)
+}
+
 // RemoveContainer removes a container.
 func (s *dockerContainerService) RemoveContainer(ctx context.Context, containerID string, options containerTypes.RemoveOptions) error {
 	return s.client.ContainerRemove(ctx, containerID, options)
@@ -65,4 +72,9 @@ func (s *dockerContainerService) ContainerInspect(ctx context.Context, container
 		return containerTypes.InspectResponse{}, fmt.Errorf("failed to inspect container %s: %w", containerID, err)
 	}
 	return inspect, nil
+}
+
+// ContainerStats returns one-shot or streaming stats for a container.
+func (s *dockerContainerService) ContainerStats(ctx context.Context, containerID string, stream bool) (containerTypes.StatsResponseReader, error) {
+	return s.client.ContainerStats(ctx, containerID, stream)
 }

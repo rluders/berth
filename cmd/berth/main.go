@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/rluders/berth/internal/tui"
 )
 
@@ -18,7 +18,11 @@ func main() {
 		fmt.Printf("Error opening log file: %v\n", err)
 		os.Exit(1)
 	}
-	defer logFile.Close()
+	defer func() {
+		if err := logFile.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing log file: %v\n", err)
+		}
+	}()
 
 	handler := slog.NewTextHandler(logFile, &slog.HandlerOptions{Level: slog.LevelDebug})
 	slog.SetDefault(slog.New(handler))
@@ -42,7 +46,7 @@ func main() {
 			}
 		}()
 		slog.Debug("Initializing Bubble Tea program...")
-		program = tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
+		program = tea.NewProgram(tui.InitialModel())
 	}()
 
 	slog.Debug("Running Bubble Tea program...")

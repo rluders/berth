@@ -1,0 +1,18 @@
+FROM docker.io/golangci/golangci-lint:v2.12.1 AS golangci-lint
+
+FROM golang:1.26-alpine
+
+RUN apk add --no-cache git curl
+
+# golangci-lint for local Podman lint runs.
+COPY --from=golangci-lint /usr/bin/golangci-lint /usr/local/bin/golangci-lint
+
+# mockery (matches CI: go install github.com/vektra/mockery/v3@latest)
+RUN go install github.com/vektra/mockery/v3@latest
+
+# pre-cache module deps — layer cache survives image rebuilds when go.mod unchanged
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+WORKDIR /app

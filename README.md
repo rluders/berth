@@ -1,15 +1,18 @@
+<p align="center">
+  <img src="docs/assets/berth-logo.png" alt="canery logo" height="240">
+</p>
+
 <div align="center">
 
-# 🚢 Berth – Terminal UI for Containers
-
-[![Go Version](https://img.shields.io/badge/go-1.24-blue?logo=go)](https://golang.org)
+[![CI](https://github.com/rluders/berth/actions/workflows/ci.yml/badge.svg)](https://github.com/rluders/berth/actions/workflows/ci.yml)
+![Go](https://img.shields.io/badge/go-1.26+-00ADD8?logo=go&logoColor=white)
+[![Go Report Card](https://goreportcard.com/badge/github.com/rluders/berth)](https://goreportcard.com/report/github.com/rluders/berth)
+[![GitHub release](https://img.shields.io/github/v/release/rluders/berth?sort=semver)](https://github.com/rluders/berth/releases)
+[![codecov](https://codecov.io/gh/rluders/berth/graph/badge.svg)](https://codecov.io/gh/rluders/berth)
 [![License](https://img.shields.io/github/license/rluders/berth)](LICENSE)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Status](https://img.shields.io/badge/status-alpha-orange)]()
 [![Made with Bubbletea](https://img.shields.io/badge/made%20with-bubbletea-ff69b4?logo=github)](https://github.com/charmbracelet/bubbletea)
 
-> **Berth** is a terminal-based UI to manage your containers, images, volumes, networks, and system usage — with support for **Docker** and **Podman**.
-> 🧠 Name origin: In maritime terms, a **berth** is a designated place where a ship is docked — just like containers in your stack. Clean, organized, and under control.
+**Berth** is a terminal-based UI to manage your containers, images, volumes, networks, and system usage — with support for **Docker** and **Podman**. Name origin: In maritime terms, a **berth** is a designated place where a ship is docked — just like containers in your stack. Clean, organized, and under control.
 
 </div>
 
@@ -31,7 +34,7 @@ Berth is a comprehensive terminal user interface (TUI) application built in Go, 
 
 ### Prerequisites
 
--   [Go](https://golang.org/doc/install) (version 1.24 or higher recommended)
+-   [Go](https://golang.org/doc/install) (version 1.26 or higher recommended)
 -   [Docker](https://docs.docker.com/get-docker/) or [Podman](https://podman.io/docs/installation) installed and running
 
 ### Steps
@@ -54,39 +57,72 @@ make run
 
 Berth provides an intuitive keyboard-driven interface.
 
-### 🎹 Navigation
+### 🎹 Global Keys
 
-*   `1` — Containers View
-*   `2` — Images View
-*   `3` — Volumes View
-*   `4` — Networks View
-*   `5` — System View
+| Key       | Action              |
+| --------- | ------------------- |
+| `1`       | Containers view     |
+| `2`       | Images view         |
+| `3`       | Volumes view        |
+| `4`       | Networks view       |
+| `5`       | System view         |
+| `?`       | Toggle help overlay |
+| `q` / `esc` | Back / quit       |
+| `ctrl+c`  | Quit                |
 
 ### 🛠️ Container Actions
 
-| Key | Action                   |
-| --- | ------------------------ |
-| `s` | Start selected container |
-| `x` | Stop selected container  |
-| `d` | Remove container         |
-| `l` | View logs                |
-| `i` | Inspect container        |
+| Key     | Action                    |
+| ------- | ------------------------- |
+| `enter` | Container details         |
+| `s`     | Start container           |
+| `x`     | Stop container            |
+| `r`     | Restart container         |
+| `d`     | Remove container          |
+| `l`     | View logs                 |
+| `i`     | Inspect container         |
+| `e`     | Exec shell                |
+| `/`     | Filter containers         |
+| `g`     | Toggle group by compose   |
+| `→`     | Expand compose group      |
+| `←`     | Collapse compose group    |
 
-### 📦 Image & Volume Actions
+### 📦 Image Actions
 
-*   `d` — Remove selected image or volume
+| Key | Action               |
+| --- | -------------------- |
+| `d` | Remove image         |
+| `P` | Prune dangling images |
+| `/` | Filter images        |
+
+### 💾 Volume Actions
+
+| Key | Action        |
+| --- | ------------- |
+| `d` | Remove volume |
+| `/` | Filter volumes |
+
+### 🌐 Network Actions
+
+| Key | Action          |
+| --- | --------------- |
+| `i` | Inspect network |
 
 ### 🧼 System Cleanup
 
-| Key | Action           |
-| --- | ---------------- |
-| `b` | Basic Cleanup    |
-| `a` | Advanced Cleanup |
-| `t` | Total Cleanup    |
+| Key | Action                                              |
+| --- | --------------------------------------------------- |
+| `b` | Basic cleanup — stopped containers, unused networks, dangling images |
+| `a` | Advanced cleanup — basic + unused volumes           |
+| `t` | Total cleanup — all unused resources                |
 
-### 🔙 Back / Exit
+### 📋 Logs View
 
-*   `q` or `esc` — Return to the previous view or quit the application from the main views.
+| Key | Action              |
+| --- | ------------------- |
+| `p` | Pause log stream    |
+| `f` | Follow (tail) logs  |
+| `n` | Toggle line numbers |
 
 ## 🛠️ Technology Stack
 
@@ -99,14 +135,14 @@ Berth provides an intuitive keyboard-driven interface.
 
 ```
 .
-├── cmd/                 # CLI entry point (e.g., main.go)
+├── cmd/                 # CLI entry point
 ├── internal/
-│   ├── tui/             # All Bubbletea models/views/components
-│   ├── engine/          # Docker/Podman abstraction layer
-│   ├── controller/      # Logic for container/image/volume actions
-│   ├── state/           # Global state models
-│   └── utils/           # Helpers: formatting, exec wrappers, etc.
-├── assets/              # Logo, themes, maybe future plugins
+│   ├── tui/             # Bubble Tea models, views, and components
+│   ├── engine/          # Docker/Podman client abstraction
+│   ├── service/         # Service layer (container, image, volume, network, system)
+│   ├── controller/      # Action handlers (start, stop, remove, inspect, …)
+│   └── utils/           # Formatting helpers and exec wrappers
+├── docs/                # Assets (logo, screenshots)
 ├── go.mod
 └── README.md
 ```
