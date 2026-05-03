@@ -17,6 +17,11 @@ var mainTabs = []ViewType{ContainersView, ImagesView, VolumesView, NetworksView,
 func (m Model) handleKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	slog.Debug("handleKeyMsg", "key", msg.String())
 
+	// Quick menu intercepts all keys when open.
+	if m.quickMenu != nil {
+		return m.handleQuickMenuKey(msg)
+	}
+
 	// Modal dialog intercepts all keys.
 	if m.modal != nil {
 		return m.handleModalKey(msg)
@@ -211,6 +216,9 @@ func (m Model) handleContainersKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 			m.logCh = ch
 			m.logCancel = cancel
 			cmds = append(cmds, waitCmd)
+		case key.Matches(msg, Keys.Container.QuickActions):
+			// space on a group row: no-op (menu is container-only)
+			return m, nil
 		default:
 			workDir := m.composeWorkDir(row.GroupID)
 			return m.dispatchComposeAction(msg, row.GroupID, workDir, cmds)
@@ -221,6 +229,10 @@ func (m Model) handleContainersKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 			m.collapsedGroups[row.GroupID] = true
 			m.recomputeRows()
 			return m, tea.Batch(cmds...)
+		}
+		if key.Matches(msg, Keys.Container.QuickActions) {
+			m.quickMenu = NewContainerQuickMenu(row.Container.ID, row.Container.Names)
+			return m, nil
 		}
 		return m.dispatchContainerAction(msg, row.Container.ID, row.Container.Names, cmds)
 	}

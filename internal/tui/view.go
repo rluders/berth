@@ -67,7 +67,9 @@ func (m Model) View() tea.View {
 			content = lipgloss.JoinVertical(lipgloss.Top, header, tabBar, m.renderHelp())
 		} else {
 			body := m.renderContent()
-			if m.modal != nil {
+			if m.quickMenu != nil {
+				body = m.renderQuickMenu(body)
+			} else if m.modal != nil {
 				body = m.renderModal(body)
 			}
 			footer := m.renderFooter()
@@ -390,7 +392,7 @@ func (m Model) renderKeyHints() string {
 			break
 		}
 		viewHints = []hint{
-			{"↑/↓", "move"}, {"enter", "details"}, {"l", "logs"},
+			{"space", "actions"}, {"↑/↓", "move"}, {"enter", "details"}, {"l", "logs"},
 			{"i", "inspect"}, {"s", "start"}, {"x", "stop"},
 			{"r", "restart"}, {"d", "delete"}, {"e", "exec"}, {"/", "filter"},
 		}

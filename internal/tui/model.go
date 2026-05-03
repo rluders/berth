@@ -81,6 +81,9 @@ type Model struct {
 	// Modal dialog (replaces old confirmAction)
 	modal *Modal
 
+	// Quick actions overlay (space key)
+	quickMenu *QuickMenu
+
 	// Help overlay
 	showHelp  bool
 	helpModel help.Model

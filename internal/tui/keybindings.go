@@ -28,8 +28,9 @@ type ContainerKeys struct {
 	Exec     key.Binding
 	Filter   key.Binding
 	Group    key.Binding
-	Expand   key.Binding
-	Collapse key.Binding
+	Expand       key.Binding
+	Collapse     key.Binding
+	QuickActions key.Binding
 }
 
 // ComposeKeys holds key bindings for compose project-level actions.
@@ -188,6 +189,10 @@ var Keys = struct {
 		Collapse: key.NewBinding(
 			key.WithKeys("left"),
 			key.WithHelp("←", "collapse group"),
+		),
+		QuickActions: key.NewBinding(
+			key.WithKeys("space"),
+			key.WithHelp("space", "actions"),
 		),
 	},
 	Compose: ComposeKeys{
