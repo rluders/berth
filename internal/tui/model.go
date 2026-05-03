@@ -97,8 +97,8 @@ type Model struct {
 	width  int
 	height int
 
-	// Column widths for the containers table (recomputed on resize).
-	containerColWidths []int
+	// Computed columns for the containers table (recomputed on resize).
+	builtCols []Column
 
 	// Last action key pressed in ContainersView (drives command preview).
 	lastActionKey string
@@ -112,9 +112,9 @@ type Model struct {
 func InitialModel() Model {
 	slog.Debug("InitialModel called")
 
-	initWidths := computeWidths(116, containerCols) // 120-col default until first WindowSizeMsg
+	initCols := BuildColumns(116, containerCols) // 120-col default until first WindowSizeMsg
 	containerTable := table.New(
-		table.WithColumns(buildTableColumns(initWidths, containerCols)),
+		table.WithColumns(buildTableColumns(initCols)),
 		table.WithFocused(true),
 		table.WithHeight(0),
 	)
@@ -169,7 +169,7 @@ func InitialModel() Model {
 		engineType:          engine.DetectEngine(),
 		currentView:         ContainersView,
 		containerTable:      containerTable,
-		containerColWidths:  initWidths,
+		builtCols:          initCols,
 		imageTable:     imageTable,
 		volumeTable:    volumeTable,
 		networkTable:   networkTable,
@@ -304,7 +304,7 @@ func (m Model) buildTableRowsFromRows() []table.Row {
 				prefix = "▶ "
 			}
 			values := []string{currentTheme.GroupHeaderStyle.Render(prefix + row.GroupID), label, "", "", "", "", ""}
-			tableRows = append(tableRows, RenderRow(containerCols, m.containerColWidths, values))
+			tableRows = append(tableRows, RenderRow(m.builtCols, values))
 
 		case RowTypeContainer:
 			c := row.Container
@@ -337,7 +337,7 @@ func (m Model) buildTableRowsFromRows() []table.Row {
 				memStr,
 				utils.FormatAge(c.CreatedAt),
 			}
-			tableRows = append(tableRows, RenderRow(containerCols, m.containerColWidths, values))
+			tableRows = append(tableRows, RenderRow(m.builtCols, values))
 		}
 	}
 	return tableRows

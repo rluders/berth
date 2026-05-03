@@ -11,6 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+var mainTabs = []ViewType{ContainersView, ImagesView, VolumesView, NetworksView, SystemView}
+
 // handleKeyMsg dispatches keyboard events to the appropriate handler.
 func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 	slog.Debug("handleKeyMsg", "key", msg.String())
@@ -66,6 +68,10 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case key.Matches(msg, Keys.Global.Tab5):
 		m.currentView = SystemView
 		return m, nil
+	case key.Matches(msg, Keys.Global.TabNext):
+		return m.cycleTab(+1), nil
+	case key.Matches(msg, Keys.Global.TabPrev):
+		return m.cycleTab(-1), nil
 	}
 
 	// Per-view keys.
@@ -457,6 +463,16 @@ func (m Model) handleDetailsKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.detailsViewPort, cmd = m.detailsViewPort.Update(msg)
 	return m, cmd
+}
+
+func (m Model) cycleTab(delta int) Model {
+	for i, v := range mainTabs {
+		if v == m.currentView {
+			m.currentView = mainTabs[(i+delta+len(mainTabs))%len(mainTabs)]
+			return m
+		}
+	}
+	return m
 }
 
 // stopLogStream cancels and cleans up the log stream goroutine.

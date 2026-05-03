@@ -11,7 +11,9 @@ type GlobalKeys struct {
 	Tab2 key.Binding
 	Tab3 key.Binding
 	Tab4 key.Binding
-	Tab5 key.Binding
+	Tab5    key.Binding
+	TabNext key.Binding
+	TabPrev key.Binding
 }
 
 // ContainerKeys holds key bindings for the containers view.
@@ -128,6 +130,14 @@ var Keys = struct {
 		Tab5: key.NewBinding(
 			key.WithKeys("5"),
 			key.WithHelp("5", "system"),
+		),
+		TabNext: key.NewBinding(
+			key.WithKeys("tab"),
+			key.WithHelp("tab", "next tab"),
+		),
+		TabPrev: key.NewBinding(
+			key.WithKeys("shift+tab"),
+			key.WithHelp("shift+tab", "prev tab"),
 		),
 	},
 	Container: ContainerKeys{

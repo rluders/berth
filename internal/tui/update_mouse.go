@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -101,28 +103,41 @@ func (m Model) handleLeftClick(msg tea.MouseMsg) (Model, tea.Cmd) {
 }
 
 // handleTabClick maps an X coordinate to a tab and switches views.
-// Tab positions are computed to match the renderTabBar() layout in view.go.
+// Replicates renderTabBar() label+style logic to get accurate widths via lipgloss.Width().
 func (m Model) handleTabClick(x int) (Model, tea.Cmd) {
+	th := currentTheme
 	tabs := []struct {
 		label string
+		count int
 		view  ViewType
 	}{
-		{"Containers", ContainersView},
-		{"Images", ImagesView},
-		{"Volumes", VolumesView},
-		{"Networks", NetworksView},
-		{"System", SystemView},
+		{"Containers", len(m.containers), ContainersView},
+		{"Images", len(m.images), ImagesView},
+		{"Volumes", len(m.volumes), VolumesView},
+		{"Networks", 0, NetworksView},
+		{"System", 0, SystemView},
 	}
 
-	// Each tab is rendered as " <label> " (2 padding each side).
 	cursor := 0
 	for _, tab := range tabs {
-		width := len(tab.label) + 4 // 2 padding left + 2 right
-		if x >= cursor && x < cursor+width {
+		label := tab.label
+		if tab.count > 0 {
+			label += " " + lipgloss.NewStyle().
+				Foreground(lipgloss.Color(colorOverlay)).
+				Render(fmt.Sprintf("%d", tab.count))
+		}
+		var rendered string
+		if m.currentView == tab.view {
+			rendered = th.ActiveTabStyle.Render(label)
+		} else {
+			rendered = th.InactiveTabStyle.Render(label)
+		}
+		w := lipgloss.Width(rendered)
+		if x >= cursor && x < cursor+w {
 			m.currentView = tab.view
 			return m, nil
 		}
-		cursor += width
+		cursor += w
 	}
 
 	return m, nil

@@ -16,8 +16,8 @@ func (m Model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
 
-	m.containerColWidths = computeWidths(msg.Width-4, containerCols)
-	m.containerTable.SetColumns(buildTableColumns(m.containerColWidths, containerCols))
+	m.builtCols = BuildColumns(msg.Width-4, containerCols)
+	m.containerTable.SetColumns(buildTableColumns(m.builtCols))
 
 	contentH := m.contentHeight()
 	m.containerTable.SetHeight(contentH)
