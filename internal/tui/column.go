@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -34,6 +35,28 @@ var containerCols = []Column{
 	{Header: "CPU%", Fixed: 6, Align: AlignRight},
 	{Header: "Mem", Fixed: 10, Align: AlignRight},
 	{Header: "Age", Fixed: 6, Align: AlignRight},
+}
+
+var imageCols = []Column{
+	{Header: "ID", Fixed: 14, Align: AlignLeft},
+	{Header: "Repository", MinWidth: 30, Align: AlignLeft},
+	{Header: "Tag", MinWidth: 20, Align: AlignLeft},
+	{Header: "Size", Fixed: 12, Align: AlignRight},
+	{Header: "Created", Fixed: 12, Align: AlignRight},
+}
+
+var volumeCols = []Column{
+	{Header: "Name", MinWidth: 30, Align: AlignLeft},
+	{Header: "Driver", Fixed: 12, Align: AlignLeft},
+	{Header: "Scope", Fixed: 10, Align: AlignLeft},
+	{Header: "Mountpoint", MinWidth: 60, Align: AlignLeft},
+}
+
+var networkCols = []Column{
+	{Header: "ID", MinWidth: 20, Align: AlignLeft},
+	{Header: "Name", MinWidth: 30, Align: AlignLeft},
+	{Header: "Driver", Fixed: 12, Align: AlignLeft},
+	{Header: "Scope", Fixed: 10, Align: AlignLeft},
 }
 
 // BuildColumns returns a copy of specs with Width computed for the given
@@ -83,6 +106,15 @@ func BuildColumns(width int, specs []Column) []Column {
 		}
 	}
 	return cols
+}
+
+func tableColumns(width int, specs []Column) []table.Column {
+	cols := BuildColumns(width, specs)
+	tableCols := make([]table.Column, len(cols))
+	for i, col := range cols {
+		tableCols[i] = table.Column{Title: col.Header, Width: col.Width}
+	}
+	return tableCols
 }
 
 // renderCell truncates to width (ANSI-safe) then applies lipgloss padding/alignment.

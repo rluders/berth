@@ -119,35 +119,19 @@ func InitialModel() Model {
 	initCols := BuildColumns(116, containerCols) // 120-col default until first WindowSizeMsg
 
 	imageTable := table.New(
-		table.WithColumns([]table.Column{
-			{Title: "ID", Width: 15},
-			{Title: "Repository", Width: 30},
-			{Title: "Tag", Width: 15},
-			{Title: "Size", Width: 10},
-			{Title: "Created", Width: 20},
-		}),
+		table.WithColumns(tableColumns(120, imageCols)),
 		table.WithFocused(false),
 		table.WithHeight(0),
 	)
 
 	volumeTable := table.New(
-		table.WithColumns([]table.Column{
-			{Title: "Name", Width: 30},
-			{Title: "Driver", Width: 15},
-			{Title: "Scope", Width: 10},
-			{Title: "Mountpoint", Width: 50},
-		}),
+		table.WithColumns(tableColumns(120, volumeCols)),
 		table.WithFocused(false),
 		table.WithHeight(0),
 	)
 
 	networkTable := table.New(
-		table.WithColumns([]table.Column{
-			{Title: "ID", Width: 15},
-			{Title: "Name", Width: 30},
-			{Title: "Driver", Width: 15},
-			{Title: "Scope", Width: 10},
-		}),
+		table.WithColumns(tableColumns(120, networkCols)),
 		table.WithFocused(false),
 		table.WithHeight(0),
 	)

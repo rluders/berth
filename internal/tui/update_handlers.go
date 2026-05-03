@@ -16,20 +16,8 @@ func (m Model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
 
-	m.builtCols = BuildColumns(msg.Width-4, containerCols)
-
 	contentH := m.contentHeight()
-	m.containerVP.Width = msg.Width
-	// Table header renders 2 lines (text + BorderBottom). Always compute using
-	// ContainersView content height (which subtracts the command-preview footer line).
-	containerContentH := contentH
-	if m.currentView != ContainersView {
-		containerContentH-- // ContainersView subtracts extra line for command preview
-	}
-	m.containerVP.Height = containerContentH - 2 // -2: table header text + border bottom
-	m.imageTable.SetHeight(contentH)
-	m.volumeTable.SetHeight(contentH)
-	m.networkTable.SetHeight(contentH)
+	m.syncTableSizes(msg.Width, contentH)
 
 	viewW := msg.Width - currentTheme.AppStyle.GetHorizontalFrameSize() - 4
 	if viewW < 0 {
@@ -54,6 +42,35 @@ func (m Model) handleWindowSizeMsg(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) syncTableSizes(width, contentH int) {
+	if width < 0 {
+		width = 0
+	}
+
+	m.builtCols = BuildColumns(width, containerCols)
+	m.containerVP.Width = width
+
+	// Table header renders 2 lines (text + BorderBottom). Always compute using
+	// ContainersView content height (which subtracts the command-preview footer line).
+	containerContentH := contentH
+	if m.currentView != ContainersView {
+		containerContentH-- // ContainersView subtracts extra line for command preview
+	}
+	m.containerVP.Height = max(0, containerContentH-2) // -2: table header text + border bottom
+
+	m.imageTable.SetWidth(width)
+	m.imageTable.SetHeight(contentH)
+	m.imageTable.SetColumns(tableColumns(width, imageCols))
+
+	m.volumeTable.SetWidth(width)
+	m.volumeTable.SetHeight(contentH)
+	m.volumeTable.SetColumns(tableColumns(width, volumeCols))
+
+	m.networkTable.SetWidth(width)
+	m.networkTable.SetHeight(contentH)
+	m.networkTable.SetColumns(tableColumns(width, networkCols))
 }
 
 func (m Model) handleContainerListMsg(msg containerListMsg) (Model, tea.Cmd) {

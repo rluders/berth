@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rluders/berth/internal/controller"
 	"github.com/stretchr/testify/assert"
@@ -115,6 +116,54 @@ func TestHandleWindowSizeMsg_setsWidthHeight(t *testing.T) {
 	assert.Equal(t, 120, result.width)
 	assert.Equal(t, 40, result.height)
 	assert.Nil(t, cmd)
+}
+
+func TestHandleWindowSizeMsg_setsListTableWidths(t *testing.T) {
+	m := InitialModel()
+
+	result, _ := updateModel(t, m, tea.WindowSizeMsg{Width: 120, Height: 40})
+
+	assert.Equal(t, 120, result.imageTable.Width())
+	assert.Equal(t, 120, result.volumeTable.Width())
+	assert.Equal(t, 120, result.networkTable.Width())
+}
+
+func TestHandleWindowSizeMsg_growsFlexibleColumns(t *testing.T) {
+	m := InitialModel()
+
+	narrow, _ := updateModel(t, m, tea.WindowSizeMsg{Width: 120, Height: 40})
+	wide, _ := updateModel(t, narrow, tea.WindowSizeMsg{Width: 180, Height: 40})
+
+	assert.Greater(t, columnWidthByTitle(t, wide.imageTable.Columns(), "Repository"), columnWidthByTitle(t, narrow.imageTable.Columns(), "Repository"))
+	assert.Greater(t, columnWidthByTitle(t, wide.volumeTable.Columns(), "Mountpoint"), columnWidthByTitle(t, narrow.volumeTable.Columns(), "Mountpoint"))
+	assert.Greater(t, columnWidthByTitle(t, wide.networkTable.Columns(), "Name"), columnWidthByTitle(t, narrow.networkTable.Columns(), "Name"))
+}
+
+func TestHandleWindowSizeMsg_narrowTablesKeepPositiveColumns(t *testing.T) {
+	m := InitialModel()
+
+	result, _ := updateModel(t, m, tea.WindowSizeMsg{Width: 40, Height: 20})
+
+	for _, cols := range [][]table.Column{
+		result.imageTable.Columns(),
+		result.volumeTable.Columns(),
+		result.networkTable.Columns(),
+	} {
+		for _, col := range cols {
+			assert.Positive(t, col.Width)
+		}
+	}
+}
+
+func columnWidthByTitle(t *testing.T, cols []table.Column, title string) int {
+	t.Helper()
+	for _, col := range cols {
+		if col.Title == title {
+			return col.Width
+		}
+	}
+	t.Fatalf("column %q not found", title)
+	return 0
 }
 
 func TestHandleLogChunkMsg_appendsLine(t *testing.T) {

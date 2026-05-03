@@ -81,6 +81,7 @@ func (m Model) View() string {
 		header,
 		tabBar,
 		lipgloss.NewStyle().
+			Width(m.width).
 			Height(m.contentHeight()).
 			Render(content),
 		footer,
