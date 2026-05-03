@@ -111,7 +111,7 @@ var quickMenuKeys = struct {
 	Up:      key.NewBinding(key.WithKeys("up", "k")),
 	Down:    key.NewBinding(key.WithKeys("down", "j")),
 	Confirm: key.NewBinding(key.WithKeys("enter")),
-	Cancel:  key.NewBinding(key.WithKeys("esc")),
+	Cancel:  key.NewBinding(key.WithKeys("esc", "q")),
 }
 
 // handleQuickMenuKey processes key input when the quick menu is open.
@@ -134,6 +134,13 @@ func (m Model) handleQuickMenuKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	case key.Matches(msg, quickMenuKeys.Confirm):
 		m.quickMenu = nil
 		return qm.Activate(m)
+	default:
+		for _, item := range qm.Items {
+			if msg.String() == item.Key {
+				m.quickMenu = nil
+				return item.Action(m)
+			}
+		}
 	}
 
 	return m, nil

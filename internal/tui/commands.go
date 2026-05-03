@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -132,6 +133,51 @@ func removeContainerCmd(idOrName string) tea.Cmd {
 			return errMsg{err}
 		}
 		return statusMsg(fmt.Sprintf("Container %s removed.", idOrName))
+	}
+}
+
+func startGroupContainersCmd(containers []controller.Container) tea.Cmd {
+	return func() tea.Msg {
+		var errs []string
+		for _, c := range containers {
+			if err := controller.StartContainer(c.ID); err != nil {
+				errs = append(errs, err.Error())
+			}
+		}
+		if len(errs) > 0 {
+			return errMsg{fmt.Errorf("start errors: %s", strings.Join(errs, "; "))}
+		}
+		return statusMsg(fmt.Sprintf("Group started (%d containers).", len(containers)))
+	}
+}
+
+func stopGroupContainersCmd(containers []controller.Container) tea.Cmd {
+	return func() tea.Msg {
+		var errs []string
+		for _, c := range containers {
+			if err := controller.StopContainer(c.ID); err != nil {
+				errs = append(errs, err.Error())
+			}
+		}
+		if len(errs) > 0 {
+			return errMsg{fmt.Errorf("stop errors: %s", strings.Join(errs, "; "))}
+		}
+		return statusMsg(fmt.Sprintf("Group stopped (%d containers).", len(containers)))
+	}
+}
+
+func restartGroupContainersCmd(containers []controller.Container) tea.Cmd {
+	return func() tea.Msg {
+		var errs []string
+		for _, c := range containers {
+			if err := controller.RestartContainer(c.ID); err != nil {
+				errs = append(errs, err.Error())
+			}
+		}
+		if len(errs) > 0 {
+			return errMsg{fmt.Errorf("restart errors: %s", strings.Join(errs, "; "))}
+		}
+		return statusMsg(fmt.Sprintf("Group restarted (%d containers).", len(containers)))
 	}
 }
 

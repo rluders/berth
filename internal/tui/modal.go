@@ -143,7 +143,7 @@ var modalKeys = struct {
 	FocusNext: key.NewBinding(key.WithKeys("tab")),
 	FocusPrev: key.NewBinding(key.WithKeys("shift+tab")),
 	Confirm:   key.NewBinding(key.WithKeys("enter")),
-	Cancel:    key.NewBinding(key.WithKeys("esc")),
+	Cancel:    key.NewBinding(key.WithKeys("esc", "q")),
 	Left:      key.NewBinding(key.WithKeys("left", "h")),
 	Right:     key.NewBinding(key.WithKeys("right", "l")),
 }

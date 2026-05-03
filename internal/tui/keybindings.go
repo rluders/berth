@@ -18,16 +18,15 @@ type GlobalKeys struct {
 
 // ContainerKeys holds key bindings for the containers view.
 type ContainerKeys struct {
-	Details  key.Binding
-	Start    key.Binding
-	Stop     key.Binding
-	Restart  key.Binding
-	Delete   key.Binding
-	Logs     key.Binding
-	Inspect  key.Binding
-	Exec     key.Binding
-	Filter   key.Binding
-	Group    key.Binding
+	Details      key.Binding
+	Start        key.Binding
+	Stop         key.Binding
+	Restart      key.Binding
+	Delete       key.Binding
+	Logs         key.Binding
+	Inspect      key.Binding
+	Exec         key.Binding
+	Filter       key.Binding
 	Expand       key.Binding
 	Collapse     key.Binding
 	QuickActions key.Binding
@@ -177,10 +176,6 @@ var Keys = struct {
 		Filter: key.NewBinding(
 			key.WithKeys("/"),
 			key.WithHelp("/", "filter"),
-		),
-		Group: key.NewBinding(
-			key.WithKeys("g"),
-			key.WithHelp("g", "group by compose"),
 		),
 		Expand: key.NewBinding(
 			key.WithKeys("right"),

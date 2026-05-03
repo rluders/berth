@@ -59,23 +59,30 @@ func (m Model) handleKeyMsg(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		}
 		return m, tea.Quit
 	case key.Matches(msg, Keys.Global.Tab1):
+		m.leaveLogView()
 		m.currentView = ContainersView
 		return m, nil
 	case key.Matches(msg, Keys.Global.Tab2):
+		m.leaveLogView()
 		m.currentView = ImagesView
 		return m, nil
 	case key.Matches(msg, Keys.Global.Tab3):
+		m.leaveLogView()
 		m.currentView = VolumesView
 		return m, nil
 	case key.Matches(msg, Keys.Global.Tab4):
+		m.leaveLogView()
 		m.currentView = NetworksView
 		return m, nil
 	case key.Matches(msg, Keys.Global.Tab5):
+		m.leaveLogView()
 		m.currentView = SystemView
 		return m, nil
 	case key.Matches(msg, Keys.Global.TabNext):
+		m.leaveLogView()
 		return m.cycleTab(+1), nil
 	case key.Matches(msg, Keys.Global.TabPrev):
+		m.leaveLogView()
 		return m.cycleTab(-1), nil
 	}
 
@@ -141,7 +148,7 @@ func (m Model) handleContainersKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		m.moveContainerCursor(+1)
 		m.lastActionKey = ""
 		return m, nil
-	case "g", "home":
+	case "home":
 		if len(m.rows) > 0 {
 			m.containerCursor = 0
 			m.syncContainerViewport()
@@ -197,12 +204,39 @@ func (m Model) handleContainersKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		case key.Matches(msg, Keys.Container.Details):
 			m.collapsedGroups[row.GroupID] = !m.collapsedGroups[row.GroupID]
 			m.recomputeRows()
+			saveState(persistedState{CollapsedGroups: m.collapsedGroups})
 		case key.Matches(msg, Keys.Container.Expand):
 			delete(m.collapsedGroups, row.GroupID)
 			m.recomputeRows()
+			saveState(persistedState{CollapsedGroups: m.collapsedGroups})
 		case key.Matches(msg, Keys.Container.Collapse):
 			m.collapsedGroups[row.GroupID] = true
 			m.recomputeRows()
+			saveState(persistedState{CollapsedGroups: m.collapsedGroups})
+		case key.Matches(msg, Keys.Container.Start):
+			m.statusMessage = fmt.Sprintf("docker start [%s]", row.GroupID)
+			m.showSpinner = true
+			cmds = append(cmds, startGroupContainersCmd(row.Containers), m.spinner.Tick)
+		case key.Matches(msg, Keys.Container.Stop):
+			m.statusMessage = fmt.Sprintf("docker stop [%s]", row.GroupID)
+			m.showSpinner = true
+			cmds = append(cmds, stopGroupContainersCmd(row.Containers), m.spinner.Tick)
+		case key.Matches(msg, Keys.Container.Restart):
+			m.statusMessage = fmt.Sprintf("docker restart [%s]", row.GroupID)
+			m.showSpinner = true
+			cmds = append(cmds, restartGroupContainersCmd(row.Containers), m.spinner.Tick)
+		case key.Matches(msg, Keys.Container.Delete):
+			var removeCmds []tea.Cmd
+			for _, c := range row.Containers {
+				removeCmds = append(removeCmds, removeContainerCmd(c.ID))
+			}
+			removeCmds = append(removeCmds, m.spinner.Tick)
+			m.modal = NewConfirmModal(
+				"Delete Group",
+				fmt.Sprintf("Delete all containers in %s?\nThis action cannot be undone.", row.GroupID),
+				tea.Batch(removeCmds...),
+			)
+			m.showSpinner = false
 		case key.Matches(msg, Keys.Container.Logs):
 			m.stopLogStream()
 			m.logLines = nil
@@ -217,8 +251,7 @@ func (m Model) handleContainersKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 			m.logCancel = cancel
 			cmds = append(cmds, waitCmd)
 		case key.Matches(msg, Keys.Container.QuickActions):
-			// space on a group row: no-op (menu is container-only)
-			return m, nil
+			m.statusMessage = "Group: use s/x/r/d to start/stop/restart/delete all containers"
 		default:
 			workDir := m.composeWorkDir(row.GroupID)
 			return m.dispatchComposeAction(msg, row.GroupID, workDir, cmds)
@@ -508,6 +541,16 @@ func (m Model) cycleTab(delta int) Model {
 		}
 	}
 	return m
+}
+
+// leaveLogView stops the log stream and resets log state when navigating away via tab switch.
+func (m *Model) leaveLogView() {
+	if m.currentView != LogsView {
+		return
+	}
+	m.stopLogStream()
+	m.logReady = false
+	m.currentLogGroupName = ""
 }
 
 // stopLogStream cancels and cleans up the log stream goroutine.

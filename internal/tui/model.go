@@ -157,7 +157,7 @@ func InitialModel() Model {
 		volumeTable:     volumeTable,
 		networkTable:    networkTable,
 		containerStats:  make(map[string]controller.ContainerStat),
-		collapsedGroups: make(map[string]bool),
+		collapsedGroups: loadedCollapsedGroups(),
 		systemInfo:      controller.SystemInfo{},
 		inspectViewPort: viewport.New(),
 		logViewPort:     viewport.New(),

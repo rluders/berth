@@ -22,7 +22,7 @@ func (containersKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{Keys.Container.QuickActions, Keys.Container.Details, Keys.Container.Logs, Keys.Container.Inspect, Keys.Container.Exec},
 		{Keys.Container.Start, Keys.Container.Stop, Keys.Container.Restart, Keys.Container.Delete},
-		{Keys.Container.Filter, Keys.Container.Group, Keys.Container.Expand, Keys.Container.Collapse},
+		{Keys.Container.Filter, Keys.Container.Expand, Keys.Container.Collapse},
 		{Keys.Compose.Up, Keys.Compose.UpBuild, Keys.Compose.Recreate, Keys.Compose.Down},
 		{Keys.Compose.Pull, Keys.Compose.Build},
 		{Keys.Global.Tab1, Keys.Global.Tab2, Keys.Global.Tab3, Keys.Global.Tab4, Keys.Global.Tab5},
