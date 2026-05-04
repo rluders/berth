@@ -267,14 +267,14 @@ func (m Model) handleContainersKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 			m.quickMenu = NewContainerQuickMenu(row.Container.ID, row.Container.Names)
 			return m, nil
 		}
-		return m.dispatchContainerAction(msg, row.Container.ID, row.Container.Names, cmds)
+		return m.dispatchContainerAction(msg, row.Container.ID, row.Container.Names, row.Container.State, cmds)
 	}
 
 	return m, tea.Batch(cmds...)
 }
 
 // dispatchContainerAction handles action keys (Details, Start, Stop, etc.) for a resolved container.
-func (m Model) dispatchContainerAction(msg tea.KeyPressMsg, id, name string, cmds []tea.Cmd) (Model, tea.Cmd) {
+func (m Model) dispatchContainerAction(msg tea.KeyPressMsg, id, name, state string, cmds []tea.Cmd) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, Keys.Container.Details):
 		m.pushView(DetailsView)
@@ -321,6 +321,10 @@ func (m Model) dispatchContainerAction(msg tea.KeyPressMsg, id, name string, cmd
 		m.showSpinner = true
 		cmds = append(cmds, inspectContainerCmd(id), m.spinner.Tick)
 	case key.Matches(msg, Keys.Container.Exec):
+		if state != "running" {
+			m.statusMessage = "Container must be running to exec"
+			return m, tea.Batch(cmds...)
+		}
 		cmds = append(cmds, execShellCmd(id))
 	}
 	return m, tea.Batch(cmds...)
