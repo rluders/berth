@@ -374,9 +374,14 @@ func (m *Model) moveContainerCursor(delta int) {
 
 // simplifyImage strips registry/org prefixes, returning only the last path
 // segment (image name + tag). e.g. docker.io/library/postgres:16 → postgres:16
+// SHA digests are shortened to 12 hex chars: sha256:a1b2c3d4e5f6
 func simplifyImage(img string) string {
 	parts := strings.Split(img, "/")
-	return parts[len(parts)-1]
+	last := parts[len(parts)-1]
+	if after, ok := strings.CutPrefix(last, "sha256:"); ok && len(after) > 12 {
+		return "sha256:" + after[:12]
+	}
+	return last
 }
 
 // buildImageRows produces filtered image rows.

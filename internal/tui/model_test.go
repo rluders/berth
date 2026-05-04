@@ -45,6 +45,21 @@ func TestRenderContainerSelectedRow_fillsModelWidth(t *testing.T) {
 	assert.Equal(t, result.width, lipgloss.Width(line))
 }
 
+func TestSimplifyImage(t *testing.T) {
+	cases := []struct{ input, want string }{
+		{"docker.io/library/postgres:16", "postgres:16"},
+		{"nginx:latest", "nginx:latest"},
+		{"nginx", "nginx"},
+		{"<none>", "<none>"},
+		{"gcr.io/google-containers/pause:3.1", "pause:3.1"},
+		{"sha256:a1b2c3d4e5f6789012345678901234567890123456789012345678901234", "sha256:a1b2c3d4e5f6"},
+		{"sha256:abc", "sha256:abc"},
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, simplifyImage(c.input), "input: %s", c.input)
+	}
+}
+
 func windowSize(width, height int) tea.WindowSizeMsg {
 	return tea.WindowSizeMsg{Width: width, Height: height}
 }
