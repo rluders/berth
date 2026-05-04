@@ -28,6 +28,8 @@ func init() {
 	containerService = service.NewContainerService(cli)
 }
 
+func setContainerServiceForTest(s service.ContainerService) { containerService = s }
+
 // Container represents a container's simplified information.
 type Container struct {
 	ID        string
@@ -318,6 +320,10 @@ func GetContainerStats(idOrName string) (stat ContainerStat, err error) {
 		return ContainerStat{}, err
 	}
 
+	return calculateStat(s), nil
+}
+
+func calculateStat(s statsJSON) ContainerStat {
 	cpuDelta := float64(s.CPUStats.CPUUsage.TotalUsage) - float64(s.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(s.CPUStats.SystemCPUUsage) - float64(s.PreCPUStats.SystemCPUUsage)
 	numCPUs := float64(s.CPUStats.OnlineCPUs)
@@ -339,7 +345,7 @@ func GetContainerStats(idOrName string) (stat ContainerStat, err error) {
 		CPUPercent: cpuPercent,
 		MemUsage:   memUsage,
 		MemLimit:   s.MemoryStats.Limit,
-	}, nil
+	}
 }
 
 // formatCreated parses a Docker RFC3339 created timestamp into a human-readable age.
