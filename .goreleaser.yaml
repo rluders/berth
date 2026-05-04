@@ -1,7 +1,10 @@
 version: 2
+
 builds:
-  - main: cmd/berth/main.go
+  - main: ./cmd/berth/main.go
     binary: berth
+    env:
+      - CGO_ENABLED=0
     goos:
       - linux
       - darwin
@@ -9,10 +12,17 @@ builds:
     goarch:
       - amd64
       - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
 
 checksum:
   name_template: "checksums.txt"
@@ -22,4 +32,4 @@ release:
     owner: rluders
     name: berth
   draft: false
-  prerelease: false
+  prerelease: auto

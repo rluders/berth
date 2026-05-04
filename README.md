@@ -25,6 +25,7 @@
 - [🧭 Usage](#-usage)
 - [🛠️ Technology Stack](#-technology-stack)
 - [📂 Project Structure](#-project-structure)
+- [🚢 Release Process](#-release-process)
 - [🤝 Contributing](#-contributing)
 - [📜 License](#-license)
 
@@ -148,6 +149,44 @@ Berth provides an intuitive keyboard-driven interface.
 ├── go.mod
 └── README.md
 ```
+
+## 🚢 Release Process
+
+Releases are fully automated via [GoReleaser](https://goreleaser.com/) and GitHub Actions.
+
+### How to release
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+Pushing a `v*.*.*` tag triggers the [Release workflow](.github/workflows/release.yml), which:
+
+1. Runs all tests (`go test ./...`)
+2. Builds binaries for Linux, macOS, and Windows (amd64 + arm64)
+3. Packages archives (`tar.gz` for Unix, `zip` for Windows)
+4. Generates `checksums.txt`
+5. Publishes a GitHub Release with all artifacts
+
+### Versioning
+
+Follow [Semantic Versioning](https://semver.org/): `vMAJOR.MINOR.PATCH`
+
+- Tags matching `v*.*.*-*` (e.g. `v1.0.0-rc1`) are published as **pre-releases** automatically.
+- No manual draft step — releases go live immediately.
+
+### Artifacts
+
+| File | Description |
+| ---- | ----------- |
+| `berth_VERSION_linux_amd64.tar.gz` | Linux x86-64 binary |
+| `berth_VERSION_linux_arm64.tar.gz` | Linux ARM64 binary |
+| `berth_VERSION_darwin_amd64.tar.gz` | macOS x86-64 binary |
+| `berth_VERSION_darwin_arm64.tar.gz` | macOS ARM64 binary |
+| `berth_VERSION_windows_amd64.zip` | Windows x86-64 binary |
+| `berth_VERSION_windows_arm64.zip` | Windows ARM64 binary |
+| `checksums.txt` | SHA256 checksums for all archives |
 
 ## 🤝 Contributing
 
